@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Aplicação Laravel (PHP-FPM + Nginx)
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - APP_ENV=production
+    container_name: telemedicina-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      - APP_NAME=${APP_NAME:-Telemedicina}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_URL=${APP_URL:-http://localhost}
+      - LOG_CHANNEL=${LOG_CHANNEL:-stack}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Database
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-telemed_demo}
+      - DB_USERNAME=${DB_USERNAME:-telemedicina}
+      - DB_PASSWORD=${DB_PASSWORD}
+      
+      # Cache & Session
+      - CACHE_DRIVER=${CACHE_DRIVER:-redis}
+      - SESSION_DRIVER=${SESSION_DRIVER:-redis}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
+      
+      # External Services
+      - ASAAS_TOKEN=${ASAAS_TOKEN}
+      - ASAAS_URL=${ASAAS_URL:-https://sandbox.asaas.com/api/v3}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      
+      # Filesystem
+      - FILESYSTEM_DRIVER=${FILESYSTEM_DRIVER:-local}
+      
+      # Mail
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@telemedicina.com}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Telemedicina}
+    volumes:
+      - storage_data:/var/www/html/storage/app
+      - storage_logs:/var/www/html/storage/logs
+      - storage_public:/var/www/html/storage/app/public
+    ports:
+      - "${APP_PORT:-8000}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - telemedicina-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # MySQL Database
+  # ============================================
+  db:
+    image: mysql:8.0
+    container_name: telemedicina-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-telemed_demo}
+      - MYSQL_USER=${DB_USERNAME:-telemedicina}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - telemedicina-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ============================================
+  # Redis (Cache, Session, Queue)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: telemedicina-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - telemedicina-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+
+  # ============================================
+  # Queue Worker (Opcional - descomente se usar filas)
+  # ============================================
+  # queue-worker:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: telemedicina-queue
+  #   restart: unless-stopped
+  #   working_dir: /var/www/html
+  #   environment:
+  #     - APP_ENV=${APP_ENV:-production}
+  #     - DB_HOST=db
+  #     - REDIS_HOST=redis
+  #   volumes:
+  #     - storage_data:/var/www/html/storage/app
+  #     - storage_logs:/var/www/html/storage/logs
+  #   depends_on:
+  #     - app
+  #     - redis
+  #   networks:
+  #     - telemedicina-network
+  #   command: php artisan queue:work --tries=3 --timeout=90
+
+  # ============================================
+  # Scheduler (Cron Jobs - Opcional)
+  # ============================================
+  # scheduler:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: telemedicina-scheduler
+  #   restart: unless-stopped
+  #   working_dir: /var/www/html
+  #   environment:
+  #     - APP_ENV=${APP_ENV:-production}
+  #     - DB_HOST=db
+  #     - REDIS_HOST=redis
+  #   volumes:
+  #     - storage_data:/var/www/html/storage/app
+  #     - storage_logs:/var/www/html/storage/logs
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - telemedicina-network
+  #   command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  storage_data:
+    driver: local
+  storage_logs:
+    driver: local
+  storage_public:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  telemedicina-network:
+    driver: bridge

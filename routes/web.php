@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,6 +12,24 @@ use Illuminate\Support\Facades\Route;
 | pelo RouteServiceProvider e agrupadas no grupo "web" com middleware padrão.
 |
 */
+
+// Health check endpoint
+Route::get('/health', function () {
+    $status = ['status' => 'healthy'];
+    
+    try {
+        DB::connection()->getPdo();
+        $status['database'] = 'connected';
+        $status['timestamp'] = now()->toIso8601String();
+    } catch (\Exception $e) {
+        $status['status'] = 'unhealthy';
+        $status['database'] = 'disconnected';
+        $status['error'] = $e->getMessage();
+        return response()->json($status, 503);
+    }
+    
+    return response()->json($status, 200);
+})->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Redireciona a rota raiz para a página de login
 // Route::get('/', function () {
