@@ -94,26 +94,35 @@ echo "✅ MySQL está aceitando conexões!"
 
 # Criar banco usando root
 echo "🔧 Verificando/Criando banco '$DB_DATABASE'..."
-php -r "
+php <<'ENDPHP'
+<?php
 try {
-    \$host = getenv('DB_HOST');
-    \$rootPass = getenv('DB_ROOT_PASSWORD');
-    \$db = getenv('DB_DATABASE');
+    $host = getenv("DB_HOST");
+    $rootPass = getenv("DB_ROOT_PASSWORD");
+    $db = getenv("DB_DATABASE");
+    
+    if (empty($host) || empty($rootPass) || empty($db)) {
+        throw new Exception("Variáveis de ambiente não definidas");
+    }
     
     // Conectar como root
-    \$pdo = new PDO('mysql:host='.\$host.';port=3306', 'root', \$rootPass, [
+    $pdo = new PDO("mysql:host=".$host.";port=3306", "root", $rootPass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
     
     // Criar banco se não existir
-    \$pdo->exec('CREATE DATABASE IF NOT EXISTS `'.\$db.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-    echo '✅ Banco criado/verificado: ' . \$db . PHP_EOL;
+    $pdo->exec("CREATE DATABASE IF NOT EXISTS `".$db."` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    echo "✅ Banco criado/verificado: " . $db . "\n";
     
-} catch(PDOException \$e) {
-    error_log('Erro ao criar banco: ' . \$e->getMessage());
+} catch(PDOException $e) {
+    echo "❌ Erro ao criar banco: " . $e->getMessage() . "\n";
+    exit(1);
+} catch(Exception $e) {
+    echo "❌ Erro: " . $e->getMessage() . "\n";
     exit(1);
 }
-" 2>&1 | grep -v "PHP" || true
+?>
+ENDPHP
 
 # Verificar conexão com banco usando root
 echo "⏳ Verificando conexão com banco '$DB_DATABASE' usando root..."
