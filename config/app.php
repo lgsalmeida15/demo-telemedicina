@@ -178,6 +178,8 @@ return [
 
         App\Providers\RepositoryServiceProvider::class,
 
+        App\Providers\ForceHttpsServiceProvider::class,
+
     ],
 
     /*

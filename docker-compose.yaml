@@ -16,9 +16,9 @@ services:
       - APP_ENV=${APP_ENV:-production}
       - APP_KEY=${APP_KEY}
       - APP_DEBUG=${APP_DEBUG:-false}
-      - APP_URL=${APP_URL:-http://localhost}
+      - APP_URL=${APP_URL:-https://demo-telemedicina.otmiz.tech}
       - ASSET_URL=${ASSET_URL:-${APP_URL}}
-      - APP_FORCE_HTTPS=${APP_FORCE_HTTPS:-false}
+      - APP_FORCE_HTTPS=${APP_FORCE_HTTPS:-true}
       - LOG_CHANNEL=${LOG_CHANNEL:-stack}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       
@@ -59,8 +59,6 @@ services:
       - storage_data:/var/www/html/storage/app
       - storage_logs:/var/www/html/storage/logs
       - storage_public:/var/www/html/storage/app/public
-    ports:
-      - "127.0.0.1:8001:80"
     depends_on:
       db:
         condition: service_healthy
@@ -70,13 +68,11 @@ services:
       - telemedicina-network
     labels:
       - traefik.enable=true
-      - traefik.docker.network=demo-telemedicina_telemedicina-network
       - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
       - traefik.http.routers.telemedicina.entrypoints=websecure
       - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
       - traefik.http.routers.telemedicina.service=telemedicina_svc
       - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
-      - traefik.http.services.telemedicina_svc.loadbalancer.server.url=http://telemedicina-app:80
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
