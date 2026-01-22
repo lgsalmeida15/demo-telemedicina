@@ -306,6 +306,22 @@ echo "   - Logs do Laravel: /var/www/html/storage/logs/laravel.log"
 echo "   - Logs do Nginx: /var/log/nginx/error.log"
 echo "   - Logs do PHP: /var/log/php/error.log"
 echo "   - Para ver logs em tempo real: docker exec <container> tail -f /var/www/html/storage/logs/laravel.log"
+echo ""
+echo "🔍 Verificando últimos erros do Laravel..."
+if [ -f /var/www/html/storage/logs/laravel.log ]; then
+    echo "   Últimas 10 linhas do log do Laravel:"
+    tail -n 10 /var/www/html/storage/logs/laravel.log 2>/dev/null || echo "   (log vazio ou inacessível)"
+else
+    echo "   Arquivo de log ainda não foi criado"
+fi
+echo ""
+echo "🔍 Verificando erros do PHP..."
+if [ -f /var/log/php/error.log ]; then
+    echo "   Últimas 5 linhas do log do PHP:"
+    tail -n 5 /var/log/php/error.log 2>/dev/null || echo "   (log vazio ou inacessível)"
+else
+    echo "   Arquivo de log ainda não foi criado"
+fi
 
 # Executar comando passado como argumento
 exec "$@"
