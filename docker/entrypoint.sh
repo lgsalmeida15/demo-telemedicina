@@ -70,9 +70,7 @@ try {
     }
     \$dsn = 'mysql:host='.\$host.';port=3306';
     \$pdo = new PDO(\$dsn, 'root', \$rootPass, [
-        PDO::ATTR_TIMEOUT => 3,
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_CONNECT_TIMEOUT => 3
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
     exit(0);
 } catch(PDOException \$e) {
@@ -148,7 +146,6 @@ try {
     \$db = getenv('DB_DATABASE');
     \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
     \$pdo = new PDO(\$dsn, 'root', \$rootPass, [
-        PDO::ATTR_TIMEOUT => 3,
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
     exit(0);
