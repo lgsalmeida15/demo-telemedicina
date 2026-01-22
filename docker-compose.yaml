@@ -67,14 +67,14 @@ services:
     networks:
       - telemedicina-network
       - network_public
-    deploy:
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
-        - traefik.http.routers.telemedicina.entrypoints=websecure
-        - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.telemedicina.service=telemedicina_svc
-        - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=network_public
+      - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
+      - traefik.http.routers.telemedicina.entrypoints=websecure
+      - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
+      - traefik.http.routers.telemedicina.service=telemedicina_svc
+      - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -201,3 +201,4 @@ networks:
     driver: bridge
   network_public:
     external: true
+    name: network_public
