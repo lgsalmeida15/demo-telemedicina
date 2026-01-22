@@ -23,11 +23,75 @@ echo "🚀 Iniciando aplicação Telemedicina..."
 # Aguardar banco de dados
 echo "⏳ Aguardando banco de dados..."
 DB_HOST=${DB_HOST:-telemedicina-db}
-until php -r "try { new PDO('mysql:host='.getenv('DB_HOST').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); exit(0); } catch(Exception \$e) { exit(1); }" &> /dev/null 2>&1; do
-    echo "⏳ Banco de dados não está pronto - aguardando..."
+DB_DATABASE=${DB_DATABASE:-telemed_demo}
+DB_USERNAME=${DB_USERNAME:-telemedicina}
+DB_PASSWORD=${DB_PASSWORD}
+
+MAX_ATTEMPTS=60
+ATTEMPT=0
+
+# Primeiro, aguardar MySQL aceitar conexões (sem especificar banco)
+echo "⏳ Aguardando MySQL aceitar conexões..."
+until php -r "
+try {
+    \$host = getenv('DB_HOST');
+    \$rootPass = getenv('DB_ROOT_PASSWORD') ?: getenv('DB_PASSWORD');
+    \$pdo = new PDO('mysql:host='.\$host.';port=3306', 'root', \$rootPass, [PDO::ATTR_TIMEOUT => 2, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    exit(0);
+} catch(Exception \$e) {
+    exit(1);
+}
+" 2>/dev/null; do
+    ATTEMPT=$((ATTEMPT + 1))
+    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+        echo "❌ Timeout: MySQL não está respondendo após $MAX_ATTEMPTS tentativas"
+        exit 1
+    fi
+    echo "⏳ Tentativa $ATTEMPT/$MAX_ATTEMPTS: MySQL não está aceitando conexões - aguardando..."
     sleep 2
 done
-echo "✅ Banco de dados está pronto!"
+echo "✅ MySQL está aceitando conexões!"
+
+# Aguardar alguns segundos para MySQL criar usuário e banco
+echo "⏳ Aguardando MySQL criar usuário e banco..."
+sleep 5
+
+# Aguardar banco específico estar disponível
+echo "⏳ Aguardando banco '$DB_DATABASE' estar disponível..."
+ATTEMPT=0
+until php -r "
+try {
+    \$host = getenv('DB_HOST');
+    \$db = getenv('DB_DATABASE');
+    \$user = getenv('DB_USERNAME');
+    \$pass = getenv('DB_PASSWORD');
+    \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
+    \$pdo = new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 3, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    exit(0);
+} catch(PDOException \$e) {
+    exit(1);
+}
+" 2>/dev/null; do
+    ATTEMPT=$((ATTEMPT + 1))
+    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+        echo "❌ Timeout: Banco '$DB_DATABASE' não está disponível após $MAX_ATTEMPTS tentativas"
+        echo "   Verifique se DB_HOST=$DB_HOST, DB_DATABASE=$DB_DATABASE, DB_USERNAME=$DB_USERNAME estão corretos"
+        # Tentar mostrar erro real
+        php -r "
+        try {
+            \$pdo = new PDO('mysql:host='.getenv('DB_HOST').';port=3306;dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        } catch(PDOException \$e) {
+            echo 'Erro: ' . \$e->getMessage() . PHP_EOL;
+        }
+        " 2>&1 | grep -v "PHP" || true
+        exit 1
+    fi
+    if [ $((ATTEMPT % 5)) -eq 0 ]; then
+        echo "⏳ Tentativa $ATTEMPT/$MAX_ATTEMPTS: Banco não está pronto - aguardando..."
+    fi
+    sleep 2
+done
+echo "✅ Banco de dados '$DB_DATABASE' está pronto!"
 
 # Verificar se APP_KEY está configurado
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:SEU_APP_KEY_AQUI" ]; then
