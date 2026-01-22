@@ -21,14 +21,14 @@ services:
       - LOG_CHANNEL=${LOG_CHANNEL:-stack}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       
-      # Database
-      - DB_CONNECTION=${DB_CONNECTION:-mysql}
-      - DB_HOST=${DB_HOST:-mysql-db}
+      # Database - Configuração direta (não depende do .env)
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql-db
       - DB_PORT=3306
-      - DB_DATABASE=${DB_DATABASE:-telemed_demo}
-      - DB_USERNAME=${DB_USERNAME:-telemedicina}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - DB_DATABASE=telemed_demo
+      - DB_USERNAME=telemedicina
+      - DB_PASSWORD=demotelemedicina@
+      - DB_ROOT_PASSWORD=Boxf0t1m1z
       
       # Cache & Session
       - CACHE_DRIVER=${CACHE_DRIVER:-redis}
