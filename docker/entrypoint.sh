@@ -22,7 +22,7 @@ echo "🚀 Iniciando aplicação Telemedicina..."
 
 # Aguardar banco de dados
 echo "⏳ Aguardando banco de dados..."
-DB_HOST=${DB_HOST:-telemedicina-db}
+DB_HOST=${DB_HOST:-mysql-db}
 DB_DATABASE=${DB_DATABASE:-telemed_demo}
 DB_USERNAME=${DB_USERNAME:-telemedicina}
 DB_PASSWORD=${DB_PASSWORD}

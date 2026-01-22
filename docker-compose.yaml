@@ -23,11 +23,12 @@ services:
       
       # Database
       - DB_CONNECTION=${DB_CONNECTION:-mysql}
-      - DB_HOST=telemedicina-db
+      - DB_HOST=${DB_HOST:-mysql-db}
       - DB_PORT=3306
       - DB_DATABASE=${DB_DATABASE:-telemed_demo}
       - DB_USERNAME=${DB_USERNAME:-telemedicina}
       - DB_PASSWORD=${DB_PASSWORD}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       
       # Cache & Session
       - CACHE_DRIVER=${CACHE_DRIVER:-redis}
@@ -79,38 +80,6 @@ services:
     volumes:
       - telemedicina-storage:/var/www/html/storage
 
-  telemedicina-db:
-    image: mysql:8.0
-    environment:
-      - MYSQL_DATABASE=${DB_DATABASE:-telemed_demo}
-      - MYSQL_USER=${DB_USERNAME:-telemedicina}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD}}
-      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
-      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "${DB_PORT:-3307}:3306"
-    networks:
-      - network_public
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 10s
-        max_attempts: 3
-      placement:
-        constraints:
-          - node.role == manager
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
-    command: --default-authentication-plugin=mysql_native_password
-
   telemedicina-redis:
     image: redis:7-alpine
     ports:
@@ -137,8 +106,6 @@ services:
     command: redis-server --appendonly yes
 
 volumes:
-  mysql_data:
-    driver: local
   redis_data:
     driver: local
   telemedicina-storage:
