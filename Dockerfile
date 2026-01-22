@@ -124,6 +124,8 @@ RUN mkdir -p \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
+    /var/log/supervisor \
+    /var/run \
     && chown -R www:www /var/www/html \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 /var/www/html
