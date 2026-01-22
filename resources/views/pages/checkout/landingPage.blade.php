@@ -769,7 +769,7 @@
                         color:#fff;
                         max-width:480px;
                     ">
-                        Use seu cartão <b style="font-weight:800; color: #152551">Elo</b> e tenha
+                        Use seu cartão <b style="font-weight:800; color: #152551">(Bandeira Card)</b> e tenha
                         acesso a <b style="color:#152551 ">telemedicina online 24h</b> com a 
                         <b style="font-weight:800;">BOXFARMA</b>
                         por apenas:
@@ -821,7 +821,7 @@
                         class="imagem-bannerelo"
                         style="
                             max-width:520px !important;
-                            width:100%;
+                            width:95%;
                             border-radius:12px;
                             object-fit:cover;
                         ">
