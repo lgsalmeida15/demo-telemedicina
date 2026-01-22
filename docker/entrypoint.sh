@@ -6,7 +6,8 @@ echo "🚀 Iniciando aplicação Telemedicina..."
 
 # Aguardar banco de dados
 echo "⏳ Aguardando banco de dados..."
-until php -r "try { new PDO('mysql:host=db;dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); exit(0); } catch(Exception \$e) { exit(1); }" &> /dev/null 2>&1; do
+DB_HOST=${DB_HOST:-telemedicina-db}
+until php -r "try { new PDO('mysql:host='.getenv('DB_HOST').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); exit(0); } catch(Exception \$e) { exit(1); }" &> /dev/null 2>&1; do
     echo "⏳ Banco de dados não está pronto - aguardando..."
     sleep 2
 done

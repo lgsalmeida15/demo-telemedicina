@@ -24,7 +24,7 @@ services:
       
       # Database
       - DB_CONNECTION=${DB_CONNECTION:-mysql}
-      - DB_HOST=db
+      - DB_HOST=telemedicina-db
       - DB_PORT=3306
       - DB_DATABASE=${DB_DATABASE:-telemed_demo}
       - DB_USERNAME=${DB_USERNAME:-telemedicina}
@@ -34,7 +34,7 @@ services:
       - CACHE_DRIVER=${CACHE_DRIVER:-redis}
       - SESSION_DRIVER=${SESSION_DRIVER:-redis}
       - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
-      - REDIS_HOST=redis
+      - REDIS_HOST=telemedicina-redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
       
@@ -66,10 +66,9 @@ services:
         condition: service_healthy
     networks:
       - telemedicina-network
-      - network_public
     labels:
       - traefik.enable=true
-      - traefik.docker.network=network_public
+      - traefik.docker.network=telemedicina-network
       - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
       - traefik.http.routers.telemedicina.entrypoints=websecure
       - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
@@ -199,6 +198,3 @@ volumes:
 networks:
   telemedicina-network:
     driver: bridge
-  network_public:
-    external: true
-    name: network_public
