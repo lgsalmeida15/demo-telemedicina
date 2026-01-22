@@ -35,12 +35,15 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 # Instalar dependências (sem dev)
+# Ignorar requisitos de plataforma que serão instalados no stage final
 RUN composer install \
     --no-dev \
     --no-scripts \
     --no-autoloader \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --ignore-platform-req=ext-gd \
+    --ignore-platform-req=ext-intl
 
 # Copiar resto do código
 COPY . .
