@@ -92,15 +92,13 @@ try {
 done
 echo "✅ MySQL está aceitando conexões!"
 
-# Criar banco e usuário se não existirem
-echo "🔧 Verificando/Criando banco '$DB_DATABASE' e usuário '$DB_USERNAME'..."
+# Criar banco usando root
+echo "🔧 Verificando/Criando banco '$DB_DATABASE'..."
 php -r "
 try {
     \$host = getenv('DB_HOST');
     \$rootPass = getenv('DB_ROOT_PASSWORD');
     \$db = getenv('DB_DATABASE');
-    \$user = getenv('DB_USERNAME');
-    \$pass = getenv('DB_PASSWORD');
     
     // Conectar como root
     \$pdo = new PDO('mysql:host='.\$host.';port=3306', 'root', \$rootPass, [
@@ -111,41 +109,22 @@ try {
     \$pdo->exec('CREATE DATABASE IF NOT EXISTS `'.\$db.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     echo '✅ Banco criado/verificado: ' . \$db . PHP_EOL;
     
-    // Verificar se usuário existe
-    \$stmt = \$pdo->query('SELECT COUNT(*) FROM mysql.user WHERE user = '.\$pdo->quote(\$user).' AND host = \\'%\\'');
-    \$userExists = \$stmt->fetchColumn() > 0;
-    
-    if (!\$userExists) {
-        \$pdo->exec('CREATE USER `'.\$user.'`@`%` IDENTIFIED BY '.\$pdo->quote(\$pass));
-        echo '✅ Usuário criado: ' . \$user . PHP_EOL;
-    } else {
-        // Atualizar senha se usuário já existe
-        \$pdo->exec('ALTER USER `'.\$user.'`@`%` IDENTIFIED BY '.\$pdo->quote(\$pass));
-        echo '✅ Senha do usuário atualizada: ' . \$user . PHP_EOL;
-    }
-    
-    // Dar permissões
-    \$pdo->exec('GRANT ALL PRIVILEGES ON `'.\$db.'`.* TO `'.\$user.'`@`%`');
-    \$pdo->exec('FLUSH PRIVILEGES');
-    echo '✅ Permissões concedidas' . PHP_EOL;
-    
 } catch(PDOException \$e) {
-    error_log('Erro ao criar banco/usuário: ' . \$e->getMessage());
+    error_log('Erro ao criar banco: ' . \$e->getMessage());
     exit(1);
 }
 " 2>&1 | grep -v "PHP" || true
 
-# Verificar conexão com banco
-echo "⏳ Verificando conexão com banco '$DB_DATABASE'..."
+# Verificar conexão com banco usando root
+echo "⏳ Verificando conexão com banco '$DB_DATABASE' usando root..."
 ATTEMPT=0
 until php -r "
 try {
     \$host = getenv('DB_HOST');
+    \$rootPass = getenv('DB_ROOT_PASSWORD');
     \$db = getenv('DB_DATABASE');
-    \$user = getenv('DB_USERNAME');
-    \$pass = getenv('DB_PASSWORD');
     \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
-    \$pdo = new PDO(\$dsn, \$user, \$pass, [
+    \$pdo = new PDO(\$dsn, 'root', \$rootPass, [
         PDO::ATTR_TIMEOUT => 3,
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
@@ -161,11 +140,10 @@ try {
         php -r "
         try {
             \$host = getenv('DB_HOST');
+            \$rootPass = getenv('DB_ROOT_PASSWORD');
             \$db = getenv('DB_DATABASE');
-            \$user = getenv('DB_USERNAME');
-            \$pass = getenv('DB_PASSWORD');
             \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
-            \$pdo = new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            \$pdo = new PDO(\$dsn, 'root', \$rootPass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
             echo '✅ Conexão bem-sucedida!' . PHP_EOL;
         } catch(PDOException \$e) {
             echo '❌ Erro: ' . \$e->getMessage() . PHP_EOL;

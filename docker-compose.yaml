@@ -26,8 +26,8 @@ services:
       - DB_HOST=mysql-db
       - DB_PORT=3306
       - DB_DATABASE=telemed_demo
-      - DB_USERNAME=telemedicina
-      - DB_PASSWORD=demotelemedicina@
+      - DB_USERNAME=root
+      - DB_PASSWORD=Boxf0t1m1z
       - DB_ROOT_PASSWORD=Boxf0t1m1z
       
       # Cache & Session
