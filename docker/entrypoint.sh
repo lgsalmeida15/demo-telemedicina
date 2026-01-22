@@ -217,20 +217,32 @@ fi
 # Atualizar .env com variáveis de ambiente do Docker
 update_env_file
 
-# LIMPAR CACHE DE VIEWS ANTES de configurar ASSET_URL (CRÍTICO!)
-echo "🧹 Limpando cache de views antes de configurar ASSET_URL..."
+# LIMPAR TODOS OS CACHES ANTES de configurar ASSET_URL (CRÍTICO!)
+echo "🧹 Limpando TODOS os caches antes de configurar ASSET_URL..."
+php artisan config:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+rm -rf /var/www/html/bootstrap/cache/*.php 2>/dev/null || true
 rm -rf /var/www/html/storage/framework/views/*.php 2>/dev/null || true
 
-# Garantir que ASSET_URL está configurado corretamente
+# Garantir que ASSET_URL está configurado corretamente no .env
 if [ -f /var/www/html/.env ]; then
     ASSET_URL_ENV=$(grep "^ASSET_URL=" /var/www/html/.env | cut -d '=' -f2- | tr -d ' ')
-    if [ -z "$ASSET_URL_ENV" ] || [ "$ASSET_URL_ENV" = "" ]; then
+    if [ -z "$ASSET_URL_ENV" ] || [ "$ASSET_URL_ENV" = "" ] || [ "$ASSET_URL_ENV" = "\${APP_URL}" ]; then
         ASSET_URL_TO_USE="${ASSET_URL:-$APP_URL}"
+        # Garantir que não há variáveis não expandidas
+        ASSET_URL_TO_USE=$(echo "$ASSET_URL_TO_USE" | sed 's|\${APP_URL}|'"$APP_URL"'|g')
         sed -i "s|^ASSET_URL=.*|ASSET_URL=$ASSET_URL_TO_USE|" /var/www/html/.env || echo "ASSET_URL=$ASSET_URL_TO_USE" >> /var/www/html/.env
         echo "✅ ASSET_URL configurado: $ASSET_URL_TO_USE"
     else
-        echo "✅ ASSET_URL já está configurado: $ASSET_URL_ENV"
+        # Verificar se contém variável não expandida
+        if echo "$ASSET_URL_ENV" | grep -q '\${APP_URL}'; then
+            ASSET_URL_TO_USE=$(echo "$ASSET_URL_ENV" | sed 's|\${APP_URL}|'"$APP_URL"'|g')
+            sed -i "s|^ASSET_URL=.*|ASSET_URL=$ASSET_URL_TO_USE|" /var/www/html/.env
+            echo "✅ ASSET_URL corrigido (expandido): $ASSET_URL_TO_USE"
+        else
+            echo "✅ ASSET_URL já está configurado: $ASSET_URL_ENV"
+        fi
     fi
     
     # Verificar se a pasta material existe
@@ -242,6 +254,10 @@ if [ -f /var/www/html/.env ]; then
         echo "⚠️  ATENÇÃO: Pasta /public/material NÃO existe!"
     fi
 fi
+
+# Recriar cache de configuração AGORA com o ASSET_URL correto
+echo "🔄 Recriando cache de configuração com ASSET_URL correto..."
+php artisan config:cache 2>/dev/null || echo "⚠️  Erro ao criar cache de configuração"
 
 # Verificar e configurar APP_KEY (CRÍTICO - deve ser feito ANTES de qualquer operação Laravel)
 if [ -f /var/www/html/.env ]; then
@@ -321,20 +337,17 @@ else
     echo "⏭️  Migrations desabilitadas (RUN_MIGRATIONS=false)"
 fi
 
-# Limpar TODOS os caches ANTES de recriar (CRÍTICO para garantir que ASSET_URL seja aplicado)
-echo "=== Limpando TODOS os caches ==="
-php artisan config:clear || true
+# Limpar caches restantes (config já foi recriado acima)
+echo "=== Limpando caches restantes ==="
 php artisan cache:clear || true
 php artisan view:clear || true
 php artisan route:clear || true
 
 # Remover cache compilado manualmente para garantir limpeza completa
-rm -rf /var/www/html/bootstrap/cache/*.php 2>/dev/null || true
 rm -rf /var/www/html/storage/framework/views/*.php 2>/dev/null || true
 
 echo "=== Recriando caches com novas configurações ==="
-# Recriar caches na ordem correta
-php artisan config:cache || echo "⚠️  Erro ao criar cache de configuração"
+# Recriar caches na ordem correta (config já foi recriado acima com ASSET_URL correto)
 php artisan route:cache || echo "⚠️  Erro ao criar cache de rotas"
 php artisan view:cache || echo "⚠️  Erro ao criar cache de views"
 php artisan optimize || echo "⚠️  Erro ao otimizar aplicação"
