@@ -305,7 +305,7 @@ else
     echo "⚠️  Erro ao carregar Laravel - verifique os logs"
 fi
 
-# Testar rota raiz
+# Testar rota raiz (apenas verificar se não há erro fatal)
 echo "🔍 Testando rota raiz..."
 php -r "
 try {
@@ -314,20 +314,19 @@ try {
     \$request = Illuminate\Http\Request::create('/', 'GET');
     \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
     \$response = \$kernel->handle(\$request);
-    echo '✅ Rota raiz respondeu com status: ' . \$response->getStatusCode() . PHP_EOL;
-    if (\$response->getStatusCode() !== 200) {
-        echo '⚠️  Status não é 200 - pode haver problema' . PHP_EOL;
+    \$status = \$response->getStatusCode();
+    echo 'Status: ' . \$status . PHP_EOL;
+    if (\$status === 200) {
+        echo '✅ Rota raiz funcionando corretamente' . PHP_EOL;
+    } else {
+        echo '⚠️  Status ' . \$status . ' - verifique os logs do Laravel para detalhes' . PHP_EOL;
     }
-} catch (Exception \$e) {
-    echo '❌ Erro na rota raiz: ' . \$e->getMessage() . PHP_EOL;
-    echo 'Stack trace: ' . \$e->getTraceAsString() . PHP_EOL;
-    exit(1);
 } catch (Throwable \$e) {
-    echo '❌ Erro fatal na rota raiz: ' . \$e->getMessage() . PHP_EOL;
+    echo '❌ Erro fatal: ' . \$e->getMessage() . PHP_EOL;
     echo 'Arquivo: ' . \$e->getFile() . ':' . \$e->getLine() . PHP_EOL;
     exit(1);
 }
-" 2>&1 | head -20
+" 2>&1 | head -10
 
 echo "✅ Inicialização completa!"
 echo "🌐 Aplicação pronta para receber requisições"

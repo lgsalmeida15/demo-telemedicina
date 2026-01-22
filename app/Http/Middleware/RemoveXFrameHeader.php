@@ -13,10 +13,14 @@ class RemoveXFrameHeader
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
-        $response->headers->remove('X-Frame-Options');
+        
+        if ($response instanceof Response && method_exists($response, 'headers')) {
+            $response->headers->remove('X-Frame-Options');
+        }
+        
         return $response;
     }
 }

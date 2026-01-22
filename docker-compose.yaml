@@ -42,6 +42,7 @@ services:
       - ASAAS_TOKEN=${ASAAS_TOKEN}
       - ASAAS_URL=${ASAAS_URL:-https://sandbox.asaas.com/api/v3}
       - BREVO_API_KEY=${BREVO_API_KEY}
+      - ELO_UUID=${ELO_UUID}
       
       # Filesystem
       - FILESYSTEM_DRIVER=${FILESYSTEM_DRIVER:-local}

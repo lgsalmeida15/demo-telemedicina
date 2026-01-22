@@ -33,16 +33,34 @@ class CheckoutController extends Controller
      */
     public function landingPage($uuid = null)
     {
-        if (!$uuid) {
-            $uuid = $this->uuid;
+        try {
+            if (!$uuid) {
+                $uuid = $this->uuid;
+            }
+            
+            if (!$uuid) {
+                // Se não tem UUID, tenta pegar a primeira empresa ou retorna erro
+                $company = Company::first();
+                if (!$company) {
+                    return redirect()->route('login')->withErrors('Nenhuma empresa configurada no sistema.');
+                }
+                $uuid = $company->uuid;
+            }
+            
+            $company = Company::where('uuid', $uuid)->first();
+            if (!$company) {
+                return redirect()->route('login')->withErrors('Empresa não encontrada.');
+            }
+            
+            $plans = Plan::where('company_id', $company->id)->get();
+            
+            return view('pages.checkout.landingPage', compact('company', 'plans'));
+        } catch (\Exception $e) {
+            \Log::error('Erro em landingPage: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('login')->withErrors('Erro ao carregar página: ' . $e->getMessage());
         }
-        $company = Company::where('uuid', $uuid)->first();
-        if (!$company) {
-            return redirect()->route('login')->withErrors('Empresa não encontrada.');
-        }
-        $plans = Plan::where('company_id', $company->id)
-            ->get();
-        return view('pages.checkout.landingPage', compact('company', 'plans'));
     }
 
 
