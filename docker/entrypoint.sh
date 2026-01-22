@@ -9,14 +9,28 @@ export APP_URL="${APP_URL:-https://demo-telemedicina.otmiz.tech}"
 export ASSET_URL="${ASSET_URL:-${APP_URL}}"
 export APP_FORCE_HTTPS=true
 
-# Atualizar .env com URLs HTTPS e configurações de proxy
-if [ -f /var/www/html/.env ]; then
+# Função para atualizar .env
+update_env_file() {
+    if [ ! -f /var/www/html/.env ]; then
+        return
+    fi
+    
+    # Atualizar URLs HTTPS
     sed -i 's|^APP_URL=.*|APP_URL='"$APP_URL"'|g' /var/www/html/.env
     sed -i 's|^ASSET_URL=.*|ASSET_URL='"$ASSET_URL"'|g' /var/www/html/.env || echo "ASSET_URL=$ASSET_URL" >> /var/www/html/.env
     
+    # Atualizar configurações de banco
+    sed -i 's|^DB_HOST=.*|DB_HOST='"${DB_HOST:-mysql-db}"'|g' /var/www/html/.env
+    sed -i 's|^DB_DATABASE=.*|DB_DATABASE='"${DB_DATABASE:-telemed_demo}"'|g' /var/www/html/.env
+    sed -i 's|^DB_USERNAME=.*|DB_USERNAME='"${DB_USERNAME:-root}"'|g' /var/www/html/.env
+    [ -n "$DB_PASSWORD" ] && sed -i 's|^DB_PASSWORD=.*|DB_PASSWORD='"$DB_PASSWORD"'|g' /var/www/html/.env
+    
     # Configurar Laravel para confiar em proxies (Traefik)
     grep -q "^TRUSTED_PROXIES=" /var/www/html/.env && sed -i 's|^TRUSTED_PROXIES=.*|TRUSTED_PROXIES=*|g' /var/www/html/.env || echo "TRUSTED_PROXIES=*" >> /var/www/html/.env
-fi
+}
+
+# Atualizar .env se existir (antes de criar novo)
+update_env_file
 
 echo "🚀 Iniciando aplicação Telemedicina..."
 
@@ -166,6 +180,45 @@ try {
     sleep 1
 done
 echo "✅ Banco de dados '$DB_DATABASE' está pronto e acessível!"
+
+# Criar .env se não existir
+if [ ! -f /var/www/html/.env ]; then
+    echo "📝 Criando arquivo .env..."
+    if [ -f /var/www/html/.env.example ]; then
+        cp /var/www/html/.env.example /var/www/html/.env
+        echo "✅ Arquivo .env criado a partir do .env.example"
+    else
+        # Criar .env básico com variáveis de ambiente
+        cat > /var/www/html/.env <<EOF
+APP_NAME=${APP_NAME:-Telemedicina}
+APP_ENV=${APP_ENV:-production}
+APP_KEY=
+APP_DEBUG=${APP_DEBUG:-false}
+APP_URL=${APP_URL:-https://demo-telemedicina.otmiz.tech}
+
+DB_CONNECTION=${DB_CONNECTION:-mysql}
+DB_HOST=${DB_HOST:-mysql-db}
+DB_PORT=3306
+DB_DATABASE=${DB_DATABASE:-telemed_demo}
+DB_USERNAME=${DB_USERNAME:-root}
+DB_PASSWORD=${DB_PASSWORD}
+
+CACHE_DRIVER=${CACHE_DRIVER:-redis}
+SESSION_DRIVER=${SESSION_DRIVER:-redis}
+QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+REDIS_HOST=${REDIS_HOST:-telemedicina-redis}
+REDIS_PORT=6379
+REDIS_PASSWORD=${REDIS_PASSWORD:-null}
+
+LOG_CHANNEL=${LOG_CHANNEL:-stack}
+LOG_LEVEL=${LOG_LEVEL:-info}
+EOF
+        echo "✅ Arquivo .env criado com configurações básicas"
+    fi
+fi
+
+# Atualizar .env com variáveis de ambiente do Docker
+update_env_file
 
 # Verificar se APP_KEY está configurado
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:SEU_APP_KEY_AQUI" ]; then
