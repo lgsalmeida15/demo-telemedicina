@@ -92,8 +92,51 @@ try {
 done
 echo "✅ MySQL está aceitando conexões!"
 
-# Aguardar banco específico estar disponível
-echo "⏳ Aguardando banco '$DB_DATABASE' estar disponível..."
+# Criar banco e usuário se não existirem
+echo "🔧 Verificando/Criando banco '$DB_DATABASE' e usuário '$DB_USERNAME'..."
+php -r "
+try {
+    \$host = getenv('DB_HOST');
+    \$rootPass = getenv('DB_ROOT_PASSWORD');
+    \$db = getenv('DB_DATABASE');
+    \$user = getenv('DB_USERNAME');
+    \$pass = getenv('DB_PASSWORD');
+    
+    // Conectar como root
+    \$pdo = new PDO('mysql:host='.\$host.';port=3306', 'root', \$rootPass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
+    
+    // Criar banco se não existir
+    \$pdo->exec('CREATE DATABASE IF NOT EXISTS `'.\$db.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+    echo '✅ Banco criado/verificado: ' . \$db . PHP_EOL;
+    
+    // Verificar se usuário existe
+    \$stmt = \$pdo->query('SELECT COUNT(*) FROM mysql.user WHERE user = '.\$pdo->quote(\$user).' AND host = \\'%\\'');
+    \$userExists = \$stmt->fetchColumn() > 0;
+    
+    if (!\$userExists) {
+        \$pdo->exec('CREATE USER `'.\$user.'`@`%` IDENTIFIED BY '.\$pdo->quote(\$pass));
+        echo '✅ Usuário criado: ' . \$user . PHP_EOL;
+    } else {
+        // Atualizar senha se usuário já existe
+        \$pdo->exec('ALTER USER `'.\$user.'`@`%` IDENTIFIED BY '.\$pdo->quote(\$pass));
+        echo '✅ Senha do usuário atualizada: ' . \$user . PHP_EOL;
+    }
+    
+    // Dar permissões
+    \$pdo->exec('GRANT ALL PRIVILEGES ON `'.\$db.'`.* TO `'.\$user.'`@`%`');
+    \$pdo->exec('FLUSH PRIVILEGES');
+    echo '✅ Permissões concedidas' . PHP_EOL;
+    
+} catch(PDOException \$e) {
+    error_log('Erro ao criar banco/usuário: ' . \$e->getMessage());
+    exit(1);
+}
+" 2>&1 | grep -v "PHP" || true
+
+# Verificar conexão com banco
+echo "⏳ Verificando conexão com banco '$DB_DATABASE'..."
 ATTEMPT=0
 until php -r "
 try {
@@ -102,32 +145,40 @@ try {
     \$user = getenv('DB_USERNAME');
     \$pass = getenv('DB_PASSWORD');
     \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
-    \$pdo = new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 3, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    \$pdo = new PDO(\$dsn, \$user, \$pass, [
+        PDO::ATTR_TIMEOUT => 3,
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
     exit(0);
 } catch(PDOException \$e) {
     exit(1);
 }
 " 2>/dev/null; do
     ATTEMPT=$((ATTEMPT + 1))
-    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-        echo "❌ Timeout: Banco '$DB_DATABASE' não está disponível após $MAX_ATTEMPTS tentativas"
-        echo "   Verifique se DB_HOST=$DB_HOST, DB_DATABASE=$DB_DATABASE, DB_USERNAME=$DB_USERNAME estão corretos"
-        # Tentar mostrar erro real
+    if [ $ATTEMPT -ge 10 ]; then
+        echo "❌ Timeout: Não foi possível conectar ao banco '$DB_DATABASE' após 10 tentativas"
+        echo "🔍 Tentando diagnóstico..."
         php -r "
         try {
-            \$pdo = new PDO('mysql:host='.getenv('DB_HOST').';port=3306;dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            \$host = getenv('DB_HOST');
+            \$db = getenv('DB_DATABASE');
+            \$user = getenv('DB_USERNAME');
+            \$pass = getenv('DB_PASSWORD');
+            \$dsn = 'mysql:host='.\$host.';port=3306;dbname='.\$db;
+            \$pdo = new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            echo '✅ Conexão bem-sucedida!' . PHP_EOL;
         } catch(PDOException \$e) {
-            echo 'Erro: ' . \$e->getMessage() . PHP_EOL;
+            echo '❌ Erro: ' . \$e->getMessage() . PHP_EOL;
         }
         " 2>&1 | grep -v "PHP" || true
         exit 1
     fi
-    if [ $((ATTEMPT % 5)) -eq 0 ]; then
-        echo "⏳ Tentativa $ATTEMPT/$MAX_ATTEMPTS: Banco não está pronto - aguardando..."
+    if [ $((ATTEMPT % 3)) -eq 0 ]; then
+        echo "⏳ Tentativa $ATTEMPT/10: Aguardando conexão com banco..."
     fi
-    sleep 2
+    sleep 1
 done
-echo "✅ Banco de dados '$DB_DATABASE' está pronto!"
+echo "✅ Banco de dados '$DB_DATABASE' está pronto e acessível!"
 
 # Verificar se APP_KEY está configurado
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:SEU_APP_KEY_AQUI" ]; then
@@ -141,16 +192,28 @@ if [ ! -L "/var/www/html/public/storage" ]; then
     php artisan storage:link
 fi
 
-# Executar migrations (apenas se flag estiver ativa)
-if [ "$RUN_MIGRATIONS" = "true" ]; then
+# Executar migrations (sempre, a menos que explicitamente desabilitado)
+if [ "$RUN_MIGRATIONS" != "false" ]; then
     echo "📊 Executando migrations..."
-    php artisan migrate --force
-    
-    # Executar seeders se flag estiver ativa
-    if [ "$RUN_SEEDERS" = "true" ]; then
-        echo "🌱 Executando seeders..."
-        php artisan db:seed --force
+    if php artisan migrate --force; then
+        echo "✅ Migrations executadas com sucesso!"
+    else
+        echo "⚠️  Erro ao executar migrations (continuando mesmo assim)..."
     fi
+    
+    # Executar seeders se flag estiver ativa (padrão: true)
+    if [ "$RUN_SEEDERS" != "false" ]; then
+        echo "🌱 Executando seeders..."
+        if php artisan db:seed --force; then
+            echo "✅ Seeders executados com sucesso!"
+        else
+            echo "⚠️  Erro ao executar seeders (continuando mesmo assim)..."
+        fi
+    else
+        echo "⏭️  Seeders desabilitados (RUN_SEEDERS=false)"
+    fi
+else
+    echo "⏭️  Migrations desabilitadas (RUN_MIGRATIONS=false)"
 fi
 
 # Limpar e recriar caches com as novas configurações
