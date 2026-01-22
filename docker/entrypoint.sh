@@ -258,25 +258,54 @@ fi
 
 # Limpar e recriar caches com as novas configurações
 echo "=== Limpando caches ==="
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
+php artisan config:clear || true
+php artisan cache:clear || true
+php artisan view:clear || true
+php artisan route:clear || true
 
 echo "=== Recriando caches ==="
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan optimize
+php artisan config:cache || echo "⚠️  Erro ao criar cache de configuração"
+php artisan route:cache || echo "⚠️  Erro ao criar cache de rotas"
+php artisan view:cache || echo "⚠️  Erro ao criar cache de views"
+php artisan optimize || echo "⚠️  Erro ao otimizar aplicação"
 
 # Corrigir permissões (se rodando como root)
 if [ "$(id -u)" = "0" ]; then
     echo "🔐 Configurando permissões..."
     chown -R www:www /var/www/html/storage /var/www/html/bootstrap/cache
     chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    
+    # Garantir que os logs sejam acessíveis
+    touch /var/www/html/storage/logs/laravel.log
+    chown www:www /var/www/html/storage/logs/laravel.log
+    chmod 664 /var/www/html/storage/logs/laravel.log
+fi
+
+# Verificar se há erros de sintaxe PHP
+echo "🔍 Verificando sintaxe PHP..."
+if php -l /var/www/html/public/index.php > /dev/null 2>&1; then
+    echo "✅ Sintaxe PHP OK"
+else
+    echo "⚠️  Erro de sintaxe PHP detectado!"
+    php -l /var/www/html/public/index.php
+fi
+
+# Testar se o Laravel está respondendo
+echo "🔍 Testando resposta do Laravel..."
+if php -r "require '/var/www/html/vendor/autoload.php'; \$app = require_once '/var/www/html/bootstrap/app.php'; echo '✅ Laravel carregado com sucesso' . PHP_EOL;" 2>&1; then
+    echo "✅ Laravel está funcionando corretamente"
+else
+    echo "⚠️  Erro ao carregar Laravel - verifique os logs"
 fi
 
 echo "✅ Inicialização completa!"
 echo "🌐 Aplicação pronta para receber requisições"
+echo ""
+echo "📋 Informações úteis:"
+echo "   - Logs do Laravel: /var/www/html/storage/logs/laravel.log"
+echo "   - Logs do Nginx: /var/log/nginx/error.log"
+echo "   - Logs do PHP: /var/log/php/error.log"
+echo "   - Para ver logs em tempo real: docker exec <container> tail -f /var/www/html/storage/logs/laravel.log"
 
 # Executar comando passado como argumento
 exec "$@"
