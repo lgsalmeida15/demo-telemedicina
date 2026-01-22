@@ -95,6 +95,9 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-custom.ini
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
+# Configuração PHP-FPM
+COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
 # Criar usuário não-root
 RUN addgroup -g 1000 -S www && \
     adduser -u 1000 -S www -G www
@@ -125,10 +128,14 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache \
     /var/log/supervisor \
+    /var/log/php \
+    /var/log/nginx \
     /var/run \
     && chown -R www:www /var/www/html \
+    && chown -R www:www /var/log/php \
     && chmod -R 775 storage bootstrap/cache \
-    && chmod -R 755 /var/www/html
+    && chmod -R 755 /var/www/html \
+    && chmod -R 755 /var/log/php
 
 # Script de entrada
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
