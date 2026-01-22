@@ -217,6 +217,27 @@ fi
 # Atualizar .env com variáveis de ambiente do Docker
 update_env_file
 
+# Garantir que ASSET_URL está configurado corretamente
+if [ -f /var/www/html/.env ]; then
+    ASSET_URL_ENV=$(grep "^ASSET_URL=" /var/www/html/.env | cut -d '=' -f2- | tr -d ' ')
+    if [ -z "$ASSET_URL_ENV" ] || [ "$ASSET_URL_ENV" = "" ]; then
+        ASSET_URL_TO_USE="${ASSET_URL:-$APP_URL}"
+        sed -i "s|^ASSET_URL=.*|ASSET_URL=$ASSET_URL_TO_USE|" /var/www/html/.env || echo "ASSET_URL=$ASSET_URL_TO_USE" >> /var/www/html/.env
+        echo "✅ ASSET_URL configurado: $ASSET_URL_TO_USE"
+    else
+        echo "✅ ASSET_URL já está configurado: $ASSET_URL_ENV"
+    fi
+    
+    # Verificar se a pasta material existe
+    if [ -d "/var/www/html/public/material" ]; then
+        echo "✅ Pasta /public/material existe"
+        echo "   Arquivos CSS encontrados: $(find /var/www/html/public/material/css -name '*.css' 2>/dev/null | wc -l)"
+        echo "   Arquivos JS encontrados: $(find /var/www/html/public/material/js -name '*.js' 2>/dev/null | wc -l)"
+    else
+        echo "⚠️  ATENÇÃO: Pasta /public/material NÃO existe!"
+    fi
+fi
+
 # Verificar e configurar APP_KEY (CRÍTICO - deve ser feito ANTES de qualquer operação Laravel)
 if [ -f /var/www/html/.env ]; then
     APP_KEY_ENV=$(grep "^APP_KEY=" /var/www/html/.env | cut -d '=' -f2- | tr -d ' ')
