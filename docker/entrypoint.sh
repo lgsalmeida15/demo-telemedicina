@@ -307,7 +307,7 @@ fi
 
 # Testar rota raiz
 echo "🔍 Testando rota raiz..."
-if php -r "
+php -r "
 try {
     require '/var/www/html/vendor/autoload.php';
     \$app = require_once '/var/www/html/bootstrap/app.php';
@@ -315,15 +315,19 @@ try {
     \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
     \$response = \$kernel->handle(\$request);
     echo '✅ Rota raiz respondeu com status: ' . \$response->getStatusCode() . PHP_EOL;
+    if (\$response->getStatusCode() !== 200) {
+        echo '⚠️  Status não é 200 - pode haver problema' . PHP_EOL;
+    }
 } catch (Exception \$e) {
     echo '❌ Erro na rota raiz: ' . \$e->getMessage() . PHP_EOL;
+    echo 'Stack trace: ' . \$e->getTraceAsString() . PHP_EOL;
+    exit(1);
+} catch (Throwable \$e) {
+    echo '❌ Erro fatal na rota raiz: ' . \$e->getMessage() . PHP_EOL;
+    echo 'Arquivo: ' . \$e->getFile() . ':' . \$e->getLine() . PHP_EOL;
     exit(1);
 }
-" 2>&1 | head -5; then
-    echo "✅ Rota raiz está funcionando"
-else
-    echo "⚠️  Problema na rota raiz - verifique os logs"
-fi
+" 2>&1 | head -20
 
 echo "✅ Inicialização completa!"
 echo "🌐 Aplicação pronta para receber requisições"
@@ -336,8 +340,8 @@ echo "   - Para ver logs em tempo real: docker exec <container> tail -f /var/www
 echo ""
 echo "🔍 Verificando últimos erros do Laravel..."
 if [ -f /var/www/html/storage/logs/laravel.log ]; then
-    echo "   Últimas 10 linhas do log do Laravel:"
-    tail -n 10 /var/www/html/storage/logs/laravel.log 2>/dev/null || echo "   (log vazio ou inacessível)"
+    echo "   Últimas 30 linhas do log do Laravel:"
+    tail -n 30 /var/www/html/storage/logs/laravel.log 2>/dev/null | grep -A 20 -B 5 "ERROR\|Exception\|Error\|Fatal" || tail -n 30 /var/www/html/storage/logs/laravel.log 2>/dev/null || echo "   (log vazio ou inacessível)"
 else
     echo "   Arquivo de log ainda não foi criado"
 fi

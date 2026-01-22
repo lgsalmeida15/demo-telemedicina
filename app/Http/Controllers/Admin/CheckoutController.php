@@ -22,8 +22,9 @@ use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
 {
+    protected $uuid;
 
-    public function __construct(Type $var = null)
+    public function __construct()
     {
         $this->uuid = env('ELO_UUID');
     }
