@@ -217,6 +217,11 @@ fi
 # Atualizar .env com variáveis de ambiente do Docker
 update_env_file
 
+# LIMPAR CACHE DE VIEWS ANTES de configurar ASSET_URL (CRÍTICO!)
+echo "🧹 Limpando cache de views antes de configurar ASSET_URL..."
+php artisan view:clear 2>/dev/null || true
+rm -rf /var/www/html/storage/framework/views/*.php 2>/dev/null || true
+
 # Garantir que ASSET_URL está configurado corretamente
 if [ -f /var/www/html/.env ]; then
     ASSET_URL_ENV=$(grep "^ASSET_URL=" /var/www/html/.env | cut -d '=' -f2- | tr -d ' ')
@@ -316,18 +321,38 @@ else
     echo "⏭️  Migrations desabilitadas (RUN_MIGRATIONS=false)"
 fi
 
-# Limpar e recriar caches com as novas configurações
-echo "=== Limpando caches ==="
+# Limpar TODOS os caches ANTES de recriar (CRÍTICO para garantir que ASSET_URL seja aplicado)
+echo "=== Limpando TODOS os caches ==="
 php artisan config:clear || true
 php artisan cache:clear || true
 php artisan view:clear || true
 php artisan route:clear || true
 
-echo "=== Recriando caches ==="
+# Remover cache compilado manualmente para garantir limpeza completa
+rm -rf /var/www/html/bootstrap/cache/*.php 2>/dev/null || true
+rm -rf /var/www/html/storage/framework/views/*.php 2>/dev/null || true
+
+echo "=== Recriando caches com novas configurações ==="
+# Recriar caches na ordem correta
 php artisan config:cache || echo "⚠️  Erro ao criar cache de configuração"
 php artisan route:cache || echo "⚠️  Erro ao criar cache de rotas"
 php artisan view:cache || echo "⚠️  Erro ao criar cache de views"
 php artisan optimize || echo "⚠️  Erro ao otimizar aplicação"
+
+# Verificar se ASSET_URL está sendo usado corretamente
+echo "🔍 Verificando configuração de assets..."
+if php -r "
+require '/var/www/html/vendor/autoload.php';
+\$app = require_once '/var/www/html/bootstrap/app.php';
+\$assetUrl = config('app.asset_url');
+echo 'ASSET_URL configurado: ' . (\$assetUrl ?: 'não definido') . PHP_EOL;
+\$testAsset = asset('material/css/test.css');
+echo 'Teste asset(): ' . \$testAsset . PHP_EOL;
+" 2>&1 | grep -v "PHP" || true; then
+    echo "✅ Configuração de assets verificada"
+else
+    echo "⚠️  Erro ao verificar configuração de assets"
+fi
 
 # Corrigir permissões (se rodando como root)
 if [ "$(id -u)" = "0" ]; then
