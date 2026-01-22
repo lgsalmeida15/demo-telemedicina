@@ -1,16 +1,13 @@
+version: "3.8"
+
 services:
-  # ============================================
-  # Aplicação Laravel (PHP-FPM + Nginx)
-  # ============================================
-  app:
+  telemedicina:
+    image: telemedicina:latest
     build:
       context: .
       dockerfile: Dockerfile
       args:
         - APP_ENV=production
-    container_name: telemedicina-app
-    restart: unless-stopped
-    working_dir: /var/www/html
     environment:
       - APP_NAME=${APP_NAME:-Telemedicina}
       - APP_ENV=${APP_ENV:-production}
@@ -55,38 +52,29 @@ services:
       - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@telemedicina.com}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME:-Telemedicina}
-    volumes:
-      - storage_data:/var/www/html/storage/app
-      - storage_logs:/var/www/html/storage/logs
-      - storage_public:/var/www/html/storage/app/public
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
+        - traefik.http.routers.telemedicina.entrypoints=websecure
+        - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.telemedicina.service=telemedicina_svc
+        - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
     networks:
-      - telemedicina-network
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
-      - traefik.http.routers.telemedicina.entrypoints=websecure
-      - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
-      - traefik.http.routers.telemedicina.service=telemedicina_svc
-      - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - network_public
+    volumes:
+      - telemedicina-storage:/var/www/html/storage
 
-  # ============================================
-  # MySQL Database
-  # ============================================
-  db:
+  telemedicina-db:
     image: mysql:8.0
-    container_name: telemedicina-db
-    restart: unless-stopped
     environment:
       - MYSQL_DATABASE=${DB_DATABASE:-telemed_demo}
       - MYSQL_USER=${DB_USERNAME:-telemedicina}
@@ -100,7 +88,11 @@ services:
     ports:
       - "${DB_PORT:-3307}:3306"
     networks:
-      - telemedicina-network
+      - network_public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
@@ -109,19 +101,18 @@ services:
       start_period: 30s
     command: --default-authentication-plugin=mysql_native_password
 
-  # ============================================
-  # Redis (Cache, Session, Queue)
-  # ============================================
-  redis:
+  telemedicina-redis:
     image: redis:7-alpine
-    container_name: telemedicina-redis
-    restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
-      - telemedicina-network
+      - network_public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -129,71 +120,14 @@ services:
       retries: 5
     command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
 
-  # ============================================
-  # Queue Worker (Opcional - descomente se usar filas)
-  # ============================================
-  # queue-worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: telemedicina-queue
-  #   restart: unless-stopped
-  #   working_dir: /var/www/html
-  #   environment:
-  #     - APP_ENV=${APP_ENV:-production}
-  #     - DB_HOST=db
-  #     - REDIS_HOST=redis
-  #   volumes:
-  #     - storage_data:/var/www/html/storage/app
-  #     - storage_logs:/var/www/html/storage/logs
-  #   depends_on:
-  #     - app
-  #     - redis
-  #   networks:
-  #     - telemedicina-network
-  #   command: php artisan queue:work --tries=3 --timeout=90
-
-  # ============================================
-  # Scheduler (Cron Jobs - Opcional)
-  # ============================================
-  # scheduler:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: telemedicina-scheduler
-  #   restart: unless-stopped
-  #   working_dir: /var/www/html
-  #   environment:
-  #     - APP_ENV=${APP_ENV:-production}
-  #     - DB_HOST=db
-  #     - REDIS_HOST=redis
-  #   volumes:
-  #     - storage_data:/var/www/html/storage/app
-  #     - storage_logs:/var/www/html/storage/logs
-  #   depends_on:
-  #     - app
-  #   networks:
-  #     - telemedicina-network
-  #   command: sh -c "while true; do php artisan schedule:run; sleep 60; done"
-
-# ============================================
-# Volumes
-# ============================================
 volumes:
   mysql_data:
     driver: local
   redis_data:
     driver: local
-  storage_data:
-    driver: local
-  storage_logs:
-    driver: local
-  storage_public:
+  telemedicina-storage:
     driver: local
 
-# ============================================
-# Networks
-# ============================================
 networks:
-  telemedicina-network:
-    driver: bridge
+  network_public:
+    external: true

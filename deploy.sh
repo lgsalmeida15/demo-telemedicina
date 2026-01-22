@@ -78,9 +78,10 @@ read -p "Escolha [1-3]: " deploy_mode
 if [ "$deploy_mode" = "1" ]; then
     log_info "Iniciando deploy completo..."
     
-    # Parar containers existentes
-    log_info "Parando containers existentes..."
-    $DOCKER_COMPOSE down -v 2>/dev/null || true
+    # Remover stack existente (se houver)
+    log_info "Removendo stack existente (se houver)..."
+    docker stack rm telemedicina 2>/dev/null || true
+    sleep 5
     
     # Limpar volumes órfãos (opcional)
     read -p "Deseja limpar volumes antigos? (y/n): " clean_volumes
@@ -89,40 +90,55 @@ if [ "$deploy_mode" = "1" ]; then
         docker volume prune -f
     fi
     
-    # Build das imagens
-    log_info "Construindo imagens Docker..."
-    $DOCKER_COMPOSE build --no-cache
+    # Build da imagem
+    log_info "Construindo imagem Docker..."
+    docker build -t telemedicina:latest --build-arg APP_ENV=production -f Dockerfile .
     log_success "Build concluído ✓"
     
-    # Subir serviços
-    log_info "Iniciando containers..."
-    $DOCKER_COMPOSE up -d
+    # Subir serviços como stack do Swarm
+    log_info "Deployando stack no Swarm..."
+    docker stack deploy -c docker-compose.yaml telemedicina
+    log_success "Stack deployada ✓"
     
-    # Aguardar banco de dados
-    log_info "Aguardando banco de dados estar pronto..."
-    sleep 15
+    # Aguardar serviços estarem prontos
+    log_info "Aguardando serviços estarem prontos..."
+    sleep 20
     
-    # Executar migrations
-    log_info "Executando migrations..."
-    $DOCKER_COMPOSE exec -T app php artisan migrate --force
+    # Obter nome do container do serviço
+    APP_CONTAINER=$(docker ps --filter "name=telemedicina_telemedicina" --format "{{.Names}}" | head -n 1)
     
-    # Perguntar sobre seeders
-    read -p "Deseja executar seeders? (y/n): " run_seeders
-    if [ "$run_seeders" = "y" ]; then
-        log_info "Executando seeders..."
-        $DOCKER_COMPOSE exec -T app php artisan db:seed --force
+    if [ -z "$APP_CONTAINER" ]; then
+        log_warning "Container da aplicação não encontrado. Aguardando mais tempo..."
+        sleep 10
+        APP_CONTAINER=$(docker ps --filter "name=telemedicina_telemedicina" --format "{{.Names}}" | head -n 1)
     fi
     
-    # Criar storage link
-    log_info "Criando storage link..."
-    $DOCKER_COMPOSE exec -T app php artisan storage:link
-    
-    # Otimizações
-    log_info "Executando otimizações..."
-    $DOCKER_COMPOSE exec -T app php artisan config:cache
-    $DOCKER_COMPOSE exec -T app php artisan route:cache
-    $DOCKER_COMPOSE exec -T app php artisan view:cache
-    $DOCKER_COMPOSE exec -T app php artisan optimize
+    if [ ! -z "$APP_CONTAINER" ]; then
+        # Executar migrations
+        log_info "Executando migrations..."
+        docker exec $APP_CONTAINER php artisan migrate --force
+        
+        # Perguntar sobre seeders
+        read -p "Deseja executar seeders? (y/n): " run_seeders
+        if [ "$run_seeders" = "y" ]; then
+            log_info "Executando seeders..."
+            docker exec $APP_CONTAINER php artisan db:seed --force
+        fi
+        
+        # Criar storage link
+        log_info "Criando storage link..."
+        docker exec $APP_CONTAINER php artisan storage:link || true
+        
+        # Otimizações
+        log_info "Executando otimizações..."
+        docker exec $APP_CONTAINER php artisan config:cache
+        docker exec $APP_CONTAINER php artisan route:cache
+        docker exec $APP_CONTAINER php artisan view:cache
+        docker exec $APP_CONTAINER php artisan optimize
+    else
+        log_warning "Não foi possível encontrar o container. Execute manualmente:"
+        log_info "docker exec <container_name> php artisan migrate --force"
+    fi
     
     log_success "Deploy completo finalizado! ✓"
 
@@ -130,19 +146,22 @@ if [ "$deploy_mode" = "1" ]; then
 elif [ "$deploy_mode" = "2" ]; then
     log_info "Iniciando deploy rápido..."
     
-    # Pull da última versão (se usar registry)
-    # docker-compose pull
+    # Atualizar stack
+    log_info "Atualizando stack..."
+    docker stack deploy -c docker-compose.yaml telemedicina
     
-    # Restart dos containers
-    log_info "Reiniciando containers..."
-    $DOCKER_COMPOSE restart
+    # Obter container
+    sleep 10
+    APP_CONTAINER=$(docker ps --filter "name=telemedicina_telemedicina" --format "{{.Names}}" | head -n 1)
     
-    # Limpar caches
-    log_info "Limpando caches..."
-    $DOCKER_COMPOSE exec -T app php artisan cache:clear
-    $DOCKER_COMPOSE exec -T app php artisan config:cache
-    $DOCKER_COMPOSE exec -T app php artisan route:cache
-    $DOCKER_COMPOSE exec -T app php artisan view:cache
+    if [ ! -z "$APP_CONTAINER" ]; then
+        # Limpar caches
+        log_info "Limpando caches..."
+        docker exec $APP_CONTAINER php artisan cache:clear
+        docker exec $APP_CONTAINER php artisan config:cache
+        docker exec $APP_CONTAINER php artisan route:cache
+        docker exec $APP_CONTAINER php artisan view:cache
+    fi
     
     log_success "Deploy rápido finalizado! ✓"
 
@@ -150,24 +169,33 @@ elif [ "$deploy_mode" = "2" ]; then
 elif [ "$deploy_mode" = "3" ]; then
     log_info "Iniciando deploy com migrations..."
     
-    # Build e up
-    log_info "Atualizando containers..."
-    $DOCKER_COMPOSE up -d --build
+    # Build da imagem
+    log_info "Construindo imagem Docker..."
+    docker build -t telemedicina:latest --build-arg APP_ENV=production -f Dockerfile .
+    
+    # Atualizar stack
+    log_info "Atualizando stack..."
+    docker stack deploy -c docker-compose.yaml telemedicina
     
     # Aguardar
-    log_info "Aguardando containers..."
-    sleep 10
+    log_info "Aguardando serviços..."
+    sleep 15
     
-    # Migrations
-    log_info "Executando migrations..."
-    $DOCKER_COMPOSE exec -T app php artisan migrate --force
+    # Obter container
+    APP_CONTAINER=$(docker ps --filter "name=telemedicina_telemedicina" --format "{{.Names}}" | head -n 1)
     
-    # Otimizações
-    log_info "Executando otimizações..."
-    $DOCKER_COMPOSE exec -T app php artisan config:cache
-    $DOCKER_COMPOSE exec -T app php artisan route:cache
-    $DOCKER_COMPOSE exec -T app php artisan view:cache
-    $DOCKER_COMPOSE exec -T app php artisan optimize
+    if [ ! -z "$APP_CONTAINER" ]; then
+        # Migrations
+        log_info "Executando migrations..."
+        docker exec $APP_CONTAINER php artisan migrate --force
+        
+        # Otimizações
+        log_info "Executando otimizações..."
+        docker exec $APP_CONTAINER php artisan config:cache
+        docker exec $APP_CONTAINER php artisan route:cache
+        docker exec $APP_CONTAINER php artisan view:cache
+        docker exec $APP_CONTAINER php artisan optimize
+    fi
     
     log_success "Deploy com migrations finalizado! ✓"
 else
@@ -176,36 +204,43 @@ else
 fi
 
 echo ""
-log_info "Verificando status dos containers..."
-$DOCKER_COMPOSE ps
+log_info "Verificando status dos serviços..."
+docker stack services telemedicina
+
+echo ""
+log_info "Verificando containers..."
+docker ps --filter "name=telemedicina" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 echo ""
 log_info "Verificando logs (últimas 20 linhas)..."
-$DOCKER_COMPOSE logs --tail=20 app
+APP_CONTAINER=$(docker ps --filter "name=telemedicina_telemedicina" --format "{{.Names}}" | head -n 1)
+if [ ! -z "$APP_CONTAINER" ]; then
+    docker logs --tail=20 $APP_CONTAINER
+fi
 
 echo ""
 log_success "============================================"
 log_success "  ✅ Deploy finalizado com sucesso!"
 log_success "============================================"
 echo ""
-log_info "Acesse a aplicação em: http://localhost:8000"
-log_info "Ou configure seu domínio no .env (APP_URL)"
+log_info "Acesse a aplicação em: https://demo-telemedicina.otmiz.tech"
 echo ""
 log_info "Comandos úteis:"
-echo "  - Ver logs: $DOCKER_COMPOSE logs -f app"
-echo "  - Entrar no container: $DOCKER_COMPOSE exec app sh"
-echo "  - Parar aplicação: $DOCKER_COMPOSE down"
-echo "  - Ver status: $DOCKER_COMPOSE ps"
+echo "  - Ver serviços: docker stack services telemedicina"
+echo "  - Ver logs: docker service logs telemedicina_telemedicina -f"
+echo "  - Entrar no container: docker exec -it <container_name> sh"
+echo "  - Parar stack: docker stack rm telemedicina"
+echo "  - Ver status: docker stack ps telemedicina"
 echo ""
 
 # Verificar health check
 log_info "Verificando health check..."
-sleep 5
-if curl -f http://localhost:8000/health &> /dev/null; then
+sleep 10
+if curl -L -k -f https://demo-telemedicina.otmiz.tech/health &> /dev/null; then
     log_success "Health check OK! ✓"
 else
     log_warning "Health check falhou. Verifique os logs."
-    log_info "Execute: $DOCKER_COMPOSE logs app"
+    log_info "Execute: docker service logs telemedicina_telemedicina"
 fi
 
 echo ""
