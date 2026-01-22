@@ -217,23 +217,23 @@ fi
 # Atualizar .env com variáveis de ambiente do Docker
 update_env_file
 
-# Verificar e gerar APP_KEY se necessário (CRÍTICO - deve ser feito ANTES de qualquer operação Laravel)
+# Verificar e configurar APP_KEY (CRÍTICO - deve ser feito ANTES de qualquer operação Laravel)
 if [ -f /var/www/html/.env ]; then
     APP_KEY_ENV=$(grep "^APP_KEY=" /var/www/html/.env | cut -d '=' -f2- | tr -d ' ')
+    
+    # Usar APP_KEY da variável de ambiente se estiver definida, senão usar a chave padrão
+    APP_KEY_TO_USE="${APP_KEY:-base64:MwXz1Sx6yaco4DQHLvFz7Lr+Hy60P8wDyN8JJU1JCUU=}"
+    
     if [ -z "$APP_KEY_ENV" ] || [ "$APP_KEY_ENV" = "" ] || [ "$APP_KEY_ENV" = "null" ] || [ "$APP_KEY_ENV" = "base64:SEU_APP_KEY_AQUI" ]; then
-        echo "⚠️  APP_KEY não encontrado ou inválido no .env - gerando..."
+        echo "⚠️  APP_KEY não encontrado ou inválido no .env - usando chave configurada..."
         
-        # Gerar APP_KEY diretamente em PHP (sem usar Laravel, pois Laravel precisa do APP_KEY)
-        echo "🔑 Gerando APP_KEY..."
-        NEW_KEY=$(php -r "echo 'base64:' . base64_encode(random_bytes(32));")
-        
-        # Atualizar .env com a nova chave
+        # Atualizar .env com a chave (da variável de ambiente ou padrão)
         if grep -q "^APP_KEY=" /var/www/html/.env; then
             # Substituir linha existente
-            sed -i "s|^APP_KEY=.*|APP_KEY=$NEW_KEY|" /var/www/html/.env
+            sed -i "s|^APP_KEY=.*|APP_KEY=$APP_KEY_TO_USE|" /var/www/html/.env
         else
             # Adicionar nova linha
-            echo "APP_KEY=$NEW_KEY" >> /var/www/html/.env
+            echo "APP_KEY=$APP_KEY_TO_USE" >> /var/www/html/.env
         fi
         
         # Verificar se foi salvo corretamente
@@ -243,7 +243,7 @@ if [ -f /var/www/html/.env ]; then
             echo "   Tentando método de fallback..."
             # Fallback: adicionar no final do arquivo
             echo "" >> /var/www/html/.env
-            echo "APP_KEY=$NEW_KEY" >> /var/www/html/.env
+            echo "APP_KEY=$APP_KEY_TO_USE" >> /var/www/html/.env
             APP_KEY_NEW=$(grep "^APP_KEY=" /var/www/html/.env | tail -1 | cut -d '=' -f2- | tr -d ' ')
         fi
         
@@ -251,7 +251,7 @@ if [ -f /var/www/html/.env ]; then
             echo "❌ ERRO CRÍTICO: Não foi possível salvar APP_KEY no .env!"
             exit 1
         else
-            echo "✅ APP_KEY gerado e salvo no .env: ${APP_KEY_NEW:0:30}..."
+            echo "✅ APP_KEY configurado no .env: ${APP_KEY_NEW:0:30}..."
         fi
         
         # Limpar cache de configuração para forçar recarregar .env
