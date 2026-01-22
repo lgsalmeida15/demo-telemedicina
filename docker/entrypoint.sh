@@ -289,10 +289,40 @@ fi
 
 # Testar se o Laravel está respondendo
 echo "🔍 Testando resposta do Laravel..."
-if php -r "require '/var/www/html/vendor/autoload.php'; \$app = require_once '/var/www/html/bootstrap/app.php'; echo '✅ Laravel carregado com sucesso' . PHP_EOL;" 2>&1; then
+if php -r "
+try {
+    require '/var/www/html/vendor/autoload.php';
+    \$app = require_once '/var/www/html/bootstrap/app.php';
+    \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
+    echo '✅ Laravel carregado com sucesso' . PHP_EOL;
+} catch (Exception \$e) {
+    echo '❌ Erro ao carregar Laravel: ' . \$e->getMessage() . PHP_EOL;
+    exit(1);
+}
+" 2>&1; then
     echo "✅ Laravel está funcionando corretamente"
 else
     echo "⚠️  Erro ao carregar Laravel - verifique os logs"
+fi
+
+# Testar rota raiz
+echo "🔍 Testando rota raiz..."
+if php -r "
+try {
+    require '/var/www/html/vendor/autoload.php';
+    \$app = require_once '/var/www/html/bootstrap/app.php';
+    \$request = Illuminate\Http\Request::create('/', 'GET');
+    \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
+    \$response = \$kernel->handle(\$request);
+    echo '✅ Rota raiz respondeu com status: ' . \$response->getStatusCode() . PHP_EOL;
+} catch (Exception \$e) {
+    echo '❌ Erro na rota raiz: ' . \$e->getMessage() . PHP_EOL;
+    exit(1);
+}
+" 2>&1 | head -5; then
+    echo "✅ Rota raiz está funcionando"
+else
+    echo "⚠️  Problema na rota raiz - verifique os logs"
 fi
 
 echo "✅ Inicialização completa!"
