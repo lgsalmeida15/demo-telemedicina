@@ -70,12 +70,13 @@ services:
       - telemedicina-network
     labels:
       - traefik.enable=true
+      - traefik.docker.network=demo-telemedicina_telemedicina-network
       - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
       - traefik.http.routers.telemedicina.entrypoints=websecure
       - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
       - traefik.http.routers.telemedicina.service=telemedicina_svc
       - traefik.http.services.telemedicina_svc.loadbalancer.server.port=80
-      - traefik.http.services.telemedicina_svc.loadbalancer.server.url=http://127.0.0.1:8001
+      - traefik.http.services.telemedicina_svc.loadbalancer.server.url=http://telemedicina-app:80
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
