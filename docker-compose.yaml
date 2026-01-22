@@ -14,7 +14,7 @@ services:
       - APP_KEY=${APP_KEY:-base64:MwXz1Sx6yaco4DQHLvFz7Lr+Hy60P8wDyN8JJU1JCUU=}
       - APP_DEBUG=${APP_DEBUG:-false}
       - APP_URL=${APP_URL:-https://demo-telemedicina.otmiz.tech}
-      - ASSET_URL=${ASSET_URL:-${APP_URL}}
+      - ASSET_URL=${ASSET_URL:-https://demo-telemedicina.otmiz.tech}
       - APP_FORCE_HTTPS=${APP_FORCE_HTTPS:-true}
       - RUN_MIGRATIONS=${RUN_MIGRATIONS:-true}
       - RUN_SEEDERS=${RUN_SEEDERS:-true}

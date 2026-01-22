@@ -6,7 +6,10 @@ echo "=== Configurando Laravel para HTTPS ==="
 
 # Forçar URLs HTTPS (sobrescreve qualquer configuração do .env)
 export APP_URL="${APP_URL:-https://demo-telemedicina.otmiz.tech}"
-export ASSET_URL="${ASSET_URL:-${APP_URL}}"
+# Garantir que ASSET_URL não contenha variáveis não expandidas
+if [ -z "$ASSET_URL" ] || echo "$ASSET_URL" | grep -q '\${APP_URL}'; then
+    export ASSET_URL="${APP_URL}"
+fi
 export APP_FORCE_HTTPS=true
 
 # Função para atualizar .env
