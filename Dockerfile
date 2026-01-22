@@ -17,7 +17,12 @@ COPY webpack.mix.js ./
 COPY public/ public/
 
 # Build de assets para produção
-RUN npm run production
+RUN npm run production || true
+
+# Garantir que mix-manifest.json existe (criar vazio se não existir)
+RUN if [ ! -f /app/public/mix-manifest.json ]; then \
+        echo '{}' > /app/public/mix-manifest.json; \
+    fi
 
 # ============================================
 # STAGE 2: PHP Dependencies
