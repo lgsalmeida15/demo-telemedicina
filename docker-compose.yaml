@@ -68,7 +68,7 @@ services:
       - telemedicina-network
     labels:
       - traefik.enable=true
-      - traefik.docker.network=telemedicina-network
+      - traefik.docker.network=demo-telemedicina_telemedicina-network
       - traefik.http.routers.telemedicina.rule=Host(`demo-telemedicina.otmiz.tech`)
       - traefik.http.routers.telemedicina.entrypoints=websecure
       - traefik.http.routers.telemedicina.tls.certresolver=letsencryptresolver
