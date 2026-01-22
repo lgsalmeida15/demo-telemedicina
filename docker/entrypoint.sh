@@ -41,10 +41,16 @@ if [ ! -L "/var/www/html/public/storage" ]; then
     php artisan storage:link
 fi
 
-# Executar migrations (apenas se APP_ENV=production e existir flag)
+# Executar migrations (apenas se flag estiver ativa)
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "📊 Executando migrations..."
     php artisan migrate --force
+    
+    # Executar seeders se flag estiver ativa
+    if [ "$RUN_SEEDERS" = "true" ]; then
+        echo "🌱 Executando seeders..."
+        php artisan db:seed --force
+    fi
 fi
 
 # Limpar e recriar caches com as novas configurações

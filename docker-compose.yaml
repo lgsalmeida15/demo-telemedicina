@@ -16,6 +16,8 @@ services:
       - APP_URL=${APP_URL:-https://demo-telemedicina.otmiz.tech}
       - ASSET_URL=${ASSET_URL:-${APP_URL}}
       - APP_FORCE_HTTPS=${APP_FORCE_HTTPS:-true}
+      - RUN_MIGRATIONS=${RUN_MIGRATIONS:-true}
+      - RUN_SEEDERS=${RUN_SEEDERS:-true}
       - LOG_CHANNEL=${LOG_CHANNEL:-stack}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       
