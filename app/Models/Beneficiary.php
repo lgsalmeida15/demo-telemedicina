@@ -119,17 +119,27 @@ class Beneficiary extends Authenticatable implements Transformable
         // Salva o valor original no banco
         $this->attributes['birth_date'] = $value;
 
-        // Gera senha somente se ainda não existir
-        if (!isset($this->attributes['password']) || empty($this->attributes['password'])) {
-
+        // ✅ CORRIGIDO: Gera senha SOMENTE se:
+        // 1. Password não estiver definido nos attributes E
+        // 2. Password não estiver sendo modificado explicitamente (não está dirty) E
+        // 3. É uma criação nova (não existe no banco ainda)
+        $passwordIsSet = isset($this->attributes['password']) && !empty($this->attributes['password']);
+        $passwordIsDirty = $this->isDirty('password');
+        
+        if (!$passwordIsSet && !$passwordIsDirty && !$this->exists) {
             // Converte a data enviada ("Y-m-d") para objeto Carbon
-            $date = Carbon::createFromFormat('Y-m-d', $value);
+            try {
+                $date = Carbon::createFromFormat('Y-m-d', $value);
 
-            // Gera a senha no formato solicitado: DDMMAAAA
-            $rawPassword = $date->format('dmY');
+                // Gera a senha no formato solicitado: DDMMAAAA
+                $rawPassword = $date->format('dmY');
 
-            // Aplica hash
-            $this->attributes['password'] = bcrypt($rawPassword);
+                // Aplica hash
+                $this->attributes['password'] = bcrypt($rawPassword);
+            } catch (\Exception $e) {
+                // Se houver erro ao processar a data, não gera senha
+                \Log::warning('Erro ao gerar senha automática do beneficiário: ' . $e->getMessage());
+            }
         }
     }
 }
