@@ -9,23 +9,12 @@ class PreventMultiGuard
 {
     public function handle($request, Closure $next)
     {
-        // 🔍 DEBUG: Log para verificar se está interferindo
-        if ($request->is('beneficiary-area*')) {
-            \Log::info('PreventMultiGuard - Verificando guards', [
-                'web_check' => Auth::guard('web')->check(),
-                'beneficiary_check' => Auth::guard('beneficiary')->check(),
-                'dependent_check' => Auth::guard('dependent')->check(),
-            ]);
-        }
-
         // Admin + Beneficiário
         if (Auth::guard('web')->check() && Auth::guard('beneficiary')->check()) {
-            \Log::warning('PreventMultiGuard: Logout beneficiary (web também autenticado)');
             Auth::guard('beneficiary')->logout();
         }
 
         if (Auth::guard('beneficiary')->check() && Auth::guard('web')->check()) {
-            \Log::warning('PreventMultiGuard: Logout web (beneficiary também autenticado)');
             Auth::guard('web')->logout();
         }
 

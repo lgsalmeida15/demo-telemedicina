@@ -27,9 +27,9 @@ class IBAMService
     private function request($method, $endpoint, $payload = null)
     {
         $url = $this->baseUrl . $endpoint;
-        $ch = curl_init();
+        $ch = \curl_init();
 
-        curl_setopt_array($ch, [
+        \curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
@@ -42,14 +42,14 @@ class IBAMService
         ]);
 
         if ($payload) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            \curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         }
 
-        $response = curl_exec($ch);
-        $err = curl_error($ch);
-        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response = \curl_exec($ch);
+        $err = \curl_error($ch);
+        $status = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        curl_close($ch);
+        \curl_close($ch);
 
         if ($err) {
             throw new Exception("Erro CURL: $err");

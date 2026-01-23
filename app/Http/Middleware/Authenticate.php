@@ -19,24 +19,6 @@ class Authenticate extends Middleware
      */
     public function handle($request, \Closure $next, ...$guards)
     {
-        // 🔍 DEBUG: Log para verificar o que está acontecendo
-        if ($request->is('beneficiary-area*')) {
-            $sessionAll = $request->session()->all();
-            $authKey = 'login_beneficiary_' . sha1('App\Models\Beneficiary');
-            
-            \Log::info('Middleware Authenticate - Verificando beneficiário', [
-                'url' => $request->fullUrl(),
-                'guards' => $guards,
-                'beneficiary_check' => Auth::guard('beneficiary')->check(),
-                'beneficiary_id' => Auth::guard('beneficiary')->id(),
-                'session_id' => $request->session()->getId(),
-                'auth_key_exists' => $request->session()->has($authKey),
-                'auth_key_value' => $request->session()->get($authKey),
-                'session_keys' => array_keys($sessionAll),
-                'session_all' => $sessionAll
-            ]);
-        }
-
         return parent::handle($request, $next, ...$guards);
     }
 
