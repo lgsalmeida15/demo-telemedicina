@@ -73,15 +73,22 @@
                                                     <td>{{ $beneficiary->id }}</td>
                                                     <td>
                                                         {{ $beneficiary->name }}
-                                                        @if($beneficiary->is_demo)
+                                                        @if(isset($beneficiary->is_demo) && $beneficiary->is_demo)
                                                             <span class="badge badge-warning ml-2">DEMO</span>
-                                                            @if($beneficiary->isDemoExpired())
-                                                                <span class="badge badge-danger ml-1">EXPIRADO</span>
-                                                            @else
+                                                            @if(isset($beneficiary->demo_expires_at) && $beneficiary->demo_expires_at)
                                                                 @php
-                                                                    $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
+                                                                    try {
+                                                                        $expiresAt = \Carbon\Carbon::parse($beneficiary->demo_expires_at);
+                                                                        $isExpired = $expiresAt->isPast();
+                                                                        $daysRemaining = now()->diffInDays($expiresAt, false);
+                                                                    } catch (\Exception $e) {
+                                                                        $isExpired = false;
+                                                                        $daysRemaining = 0;
+                                                                    }
                                                                 @endphp
-                                                                @if($daysRemaining > 0)
+                                                                @if($isExpired)
+                                                                    <span class="badge badge-danger ml-1">EXPIRADO</span>
+                                                                @elseif($daysRemaining > 0)
                                                                     <span class="badge badge-info ml-1">{{ $daysRemaining }}d restantes</span>
                                                                 @endif
                                                             @endif

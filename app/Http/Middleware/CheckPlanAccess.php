@@ -22,10 +22,10 @@ class CheckPlanAccess
             $beneficiary = $user;
         }
         
-        // ✅ BYPASS PARA BENEFICIÁRIOS DEMO
-        if ($beneficiary->isDemo()) {
+        // ✅ BYPASS PARA BENEFICIÁRIOS DEMO (com verificação de segurança)
+        if (method_exists($beneficiary, 'isDemo') && $beneficiary->isDemo()) {
             // Verificar se demo expirou
-            if ($beneficiary->isDemoExpired()) {
+            if (method_exists($beneficiary, 'isDemoExpired') && $beneficiary->isDemoExpired()) {
                 return redirect()
                     ->route('beneficiary.login')
                     ->withErrors('Seu período de demonstração expirou. Entre em contato para ativar seu plano.');

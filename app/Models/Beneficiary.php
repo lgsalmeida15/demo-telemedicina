@@ -107,7 +107,11 @@ class Beneficiary extends Authenticatable implements Transformable
      */
     public function isDemo(): bool
     {
-        return $this->is_demo === true;
+        // Verificação de segurança: se a coluna não existe, retorna false
+        if (!isset($this->attributes['is_demo']) && !property_exists($this, 'is_demo')) {
+            return false;
+        }
+        return isset($this->is_demo) && $this->is_demo === true;
     }
 
     /**
@@ -115,11 +119,16 @@ class Beneficiary extends Authenticatable implements Transformable
      */
     public function isDemoExpired(): bool
     {
-        if (!$this->is_demo || !$this->demo_expires_at) {
+        // Verificação de segurança: se não for demo ou não tiver data, retorna false
+        if (!$this->isDemo() || !isset($this->demo_expires_at) || !$this->demo_expires_at) {
             return false;
         }
         
-        return $this->demo_expires_at->isPast();
+        try {
+            return \Carbon\Carbon::parse($this->demo_expires_at)->isPast();
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

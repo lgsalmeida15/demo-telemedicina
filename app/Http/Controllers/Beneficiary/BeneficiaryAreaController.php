@@ -23,26 +23,28 @@ class BeneficiaryAreaController extends Controller
     {
         $beneficiary = Auth::guard('beneficiary')->user();
         
-        // ✅ Verificar se é demo e mostrar aviso
-        if ($beneficiary->isDemo()) {
-            $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
-            
-            if ($daysRemaining > 0) {
-                session()->flash('demo_warning', "Você está usando uma conta demo. Expira em {$daysRemaining} dias.");
-            } else {
-                session()->flash('demo_expired', 'Sua conta demo expirou. Entre em contato para ativar.');
+        // ✅ Verificar se é demo e mostrar aviso (com verificação de segurança)
+        if (method_exists($beneficiary, 'isDemo') && $beneficiary->isDemo()) {
+            if ($beneficiary->demo_expires_at) {
+                $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
+                
+                if ($daysRemaining > 0) {
+                    session()->flash('demo_warning', "Você está usando uma conta demo. Expira em {$daysRemaining} dias.");
+                } else {
+                    session()->flash('demo_expired', 'Sua conta demo expirou. Entre em contato para ativar.');
+                }
             }
         }
         
         // Verificar inadimplência apenas se NÃO for demo
-        if (!$beneficiary->isDemo()) {
+        if (!method_exists($beneficiary, 'isDemo') || !$beneficiary->isDemo()) {
             if ($beneficiary->isInadimplente()) {
                 session()->flash('warning', 'Você possui faturas em aberto.');
             }
         }
 
         // Integração IBAM (skip para demos)
-        if (!$beneficiary->isDemo()) {
+        if (!method_exists($beneficiary, 'isDemo') || !$beneficiary->isDemo()) {
             try {
                 $cpf = preg_replace('/\D/', '', $beneficiary->cpf);
 
