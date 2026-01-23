@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Http;
 use Exception;
 
 class IBAMService
@@ -27,38 +28,43 @@ class IBAMService
     private function request($method, $endpoint, $payload = null)
     {
         $url = $this->baseUrl . $endpoint;
-        $ch = \curl_init();
-
-        \curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_SSL_VERIFYPEER => false, // evitar erro SSL no Windows
-            CURLOPT_HTTPHEADER => array_filter([
-                "Accept: application/json",
-                "Content-Type: application/json",
-                $this->token ? "Authorization: Bearer {$this->token}" : null
-            ])
-        ]);
-
-        if ($payload) {
-            \curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        }
-
-        $response = \curl_exec($ch);
-        $err = \curl_error($ch);
-        $status = \curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        \curl_close($ch);
-
-        if ($err) {
-            throw new Exception("Erro CURL: $err");
-        }
-
-        return [
-            "status" => $status,
-            "response" => json_decode($response, true)
+        
+        // Prepara headers
+        $headers = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
         ];
+        
+        if ($this->token) {
+            $headers['Authorization'] = "Bearer {$this->token}";
+        }
+
+        // Faz requisição usando Laravel HTTP Client (Guzzle)
+        try {
+            $http = Http::withHeaders($headers)
+                ->withoutVerifying(); // equivalente a CURLOPT_SSL_VERIFYPEER => false
+
+            $methodUpper = strtoupper($method);
+            
+            if ($methodUpper === 'GET') {
+                $response = $http->get($url);
+            } elseif ($methodUpper === 'POST') {
+                $response = $http->post($url, $payload ?? []);
+            } elseif ($methodUpper === 'PUT') {
+                $response = $http->put($url, $payload ?? []);
+            } elseif ($methodUpper === 'DELETE') {
+                $response = $http->delete($url, $payload ?? []);
+            } else {
+                throw new Exception("Método HTTP não suportado: {$method}");
+            }
+
+            return [
+                "status" => $response->status(),
+                "response" => $response->json()
+            ];
+        } catch (\Exception $e) {
+            throw new Exception("Erro na requisição IBAM: " . $e->getMessage());
+        }
     }
 
     /**
