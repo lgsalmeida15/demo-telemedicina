@@ -23,40 +23,92 @@ class BeneficiaryAuthController extends Controller
      */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+        // 🔍 LOG INICIAL - Verifica se o método está sendo chamado
+        \Log::info('=== INÍCIO LOGIN BENEFICIÁRIO ===', [
+            'ip' => $request->ip(),
+            'email' => $request->input('email'),
+            'has_password' => !empty($request->input('password')),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
         ]);
 
-        // 🔍 DEBUG: Verifica se o beneficiário existe
-        $beneficiary = Beneficiary::where('email', $credentials['email'])->first();
-        
-        if (!$beneficiary) {
-            \Log::warning('Tentativa de login com email não encontrado: ' . $credentials['email']);
-            return back()->withErrors([
-                'email' => 'As credenciais informadas estão incorretas.',
+        try {
+            // Validação manual para capturar erros
+            $validator = \Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
             ]);
-        }
 
-        // 🔍 DEBUG: Verifica se a senha está correta
-        if (!Hash::check($credentials['password'], $beneficiary->password)) {
-            \Log::warning('Senha incorreta para beneficiário: ' . $credentials['email']);
-            return back()->withErrors([
-                'email' => 'As credenciais informadas estão incorretas.',
+            if ($validator->fails()) {
+                \Log::warning('Validação falhou no login', [
+                    'errors' => $validator->errors()->toArray(),
+                    'input' => $request->except('password')
+                ]);
+                return back()->withErrors($validator)->withInput();
+            }
+
+            $credentials = $request->only('email', 'password');
+            
+            \Log::info('Credenciais validadas', ['email' => $credentials['email']]);
+
+            // 🔍 DEBUG: Verifica se o beneficiário existe
+            $beneficiary = Beneficiary::where('email', $credentials['email'])->first();
+            
+            if (!$beneficiary) {
+                \Log::warning('Tentativa de login com email não encontrado: ' . $credentials['email']);
+                return back()->withErrors([
+                    'email' => 'As credenciais informadas estão incorretas.',
+                ])->withInput();
+            }
+
+            \Log::info('Beneficiário encontrado', [
+                'id' => $beneficiary->id,
+                'email' => $beneficiary->email,
+                'has_password' => !empty($beneficiary->password)
             ]);
-        }
 
-        // ✅ Autentica o beneficiário
-        if (Auth::guard('beneficiary')->loginUsingId($beneficiary->id)) {
-            $request->session()->regenerate();
-            \Log::info('Beneficiário autenticado com sucesso: ' . $credentials['email']);
-            return redirect()->route('beneficiary.area.index'); // redireciona para index
-        }
+            // 🔍 DEBUG: Verifica se a senha está correta
+            if (!Hash::check($credentials['password'], $beneficiary->password)) {
+                \Log::warning('Senha incorreta para beneficiário', [
+                    'email' => $credentials['email'],
+                    'password_provided' => !empty($credentials['password']),
+                    'password_hash_exists' => !empty($beneficiary->password)
+                ]);
+                return back()->withErrors([
+                    'email' => 'As credenciais informadas estão incorretas.',
+                ])->withInput();
+            }
 
-        \Log::error('Falha ao autenticar beneficiário: ' . $credentials['email']);
-        return back()->withErrors([
-            'email' => 'Erro ao realizar login. Tente novamente.',
-        ]);
+            \Log::info('Senha verificada com sucesso');
+
+            // ✅ Autentica o beneficiário
+            if (Auth::guard('beneficiary')->loginUsingId($beneficiary->id)) {
+                $request->session()->regenerate();
+                \Log::info('Beneficiário autenticado com sucesso', [
+                    'email' => $credentials['email'],
+                    'session_id' => $request->session()->getId()
+                ]);
+                return redirect()->route('beneficiary.area.index'); // redireciona para index
+            }
+
+            \Log::error('Falha ao autenticar beneficiário - loginUsingId retornou false', [
+                'email' => $credentials['email'],
+                'beneficiary_id' => $beneficiary->id
+            ]);
+            return back()->withErrors([
+                'email' => 'Erro ao realizar login. Tente novamente.',
+            ])->withInput();
+
+        } catch (\Exception $e) {
+            \Log::error('EXCEÇÃO no login do beneficiário', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'email' => $request->input('email')
+            ]);
+            return back()->withErrors([
+                'email' => 'Erro inesperado ao realizar login. Tente novamente.',
+            ])->withInput();
+        }
     }
 
     /**
