@@ -168,7 +168,7 @@
                 </div>
             @endif
 
-            @if(isset($beneficiary->is_demo) && $beneficiary->is_demo)
+            @if($beneficiary->isDemo())
                 <div class="alert alert-warning mb-4" style="border-left: 4px solid #ffc107;">
                     <div class="d-flex align-items-center">
                         <i class="material-icons mr-2" style="font-size: 28px;">info</i>
@@ -177,22 +177,16 @@
                                 <span class="badge badge-warning mr-2">CONTA DEMO</span>
                                 Você está usando uma conta de demonstração
                             </h5>
-                            @if(isset($beneficiary->demo_expires_at) && $beneficiary->demo_expires_at)
+                            @if($beneficiary->demo_expires_at)
                                 @php
-                                    try {
-                                        $expiresAt = \Carbon\Carbon::parse($beneficiary->demo_expires_at);
-                                        $daysRemaining = now()->diffInDays($expiresAt, false);
-                                    } catch (\Exception $e) {
-                                        $daysRemaining = 0;
-                                        $expiresAt = null;
-                                    }
+                                    $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
                                 @endphp
-                                @if($expiresAt && $daysRemaining > 0)
+                                @if($daysRemaining > 0)
                                     <p class="mb-0">
-                                        <strong>Expira em:</strong> {{ $expiresAt->format('d/m/Y') }} 
+                                        <strong>Expira em:</strong> {{ $beneficiary->demo_expires_at->format('d/m/Y') }} 
                                         ({{ $daysRemaining }} {{ $daysRemaining == 1 ? 'dia' : 'dias' }} restantes)
                                     </p>
-                                @elseif($expiresAt)
+                                @else
                                     <p class="mb-0 text-danger">
                                         <strong>Sua conta demo expirou!</strong> Entre em contato para ativar seu plano.
                                     </p>
