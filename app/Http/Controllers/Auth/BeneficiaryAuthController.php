@@ -81,20 +81,30 @@ class BeneficiaryAuthController extends Controller
 
             \Log::info('Senha verificada com sucesso');
 
-            // ✅ SOLUÇÃO: Faz login SEM regenerate para testar
-            // Se funcionar, sabemos que o problema é o regenerate()
+            // ✅ SOLUÇÃO: Faz login e verifica se está sendo salvo na sessão
             Auth::guard('beneficiary')->login($beneficiary, false);
+            
+            // Verifica o conteúdo da sessão ANTES de salvar
+            $sessionBefore = $request->session()->all();
+            $authKey = 'login_beneficiary_' . sha1('App\Models\Beneficiary');
+            
+            \Log::info('Sessão ANTES de salvar', [
+                'session_id' => $request->session()->getId(),
+                'auth_key_exists' => $request->session()->has($authKey),
+                'session_keys' => array_keys($sessionBefore),
+                'is_authenticated' => Auth::guard('beneficiary')->check(),
+                'user_id' => Auth::guard('beneficiary')->id()
+            ]);
             
             // Salva a sessão explicitamente
             $request->session()->save();
             
-            \Log::info('Beneficiário autenticado (SEM regenerate)', [
-                'email' => $credentials['email'],
+            // Verifica DEPOIS de salvar
+            \Log::info('Sessão DEPOIS de salvar', [
                 'session_id' => $request->session()->getId(),
                 'is_authenticated' => Auth::guard('beneficiary')->check(),
                 'user_id' => Auth::guard('beneficiary')->id(),
-                'beneficiary_id' => $beneficiary->id,
-                'session_keys' => array_keys($request->session()->all())
+                'beneficiary_id' => $beneficiary->id
             ]);
             
             // Redireciona para a área do beneficiário
