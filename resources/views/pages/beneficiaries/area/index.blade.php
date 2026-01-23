@@ -147,6 +147,55 @@
     </button>
     <div class="content">
         <div class="container-fluid">
+            {{-- Avisos de Demo --}}
+            @if(session('demo_warning'))
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="material-icons">info</i>
+                    <strong>Atenção:</strong> {{ session('demo_warning') }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            @endif
+
+            @if(session('demo_expired'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="material-icons">warning</i>
+                    <strong>Conta Expirada:</strong> {{ session('demo_expired') }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            @endif
+
+            @if($beneficiary->isDemo())
+                <div class="alert alert-warning mb-4" style="border-left: 4px solid #ffc107;">
+                    <div class="d-flex align-items-center">
+                        <i class="material-icons mr-2" style="font-size: 28px;">info</i>
+                        <div>
+                            <h5 class="mb-1">
+                                <span class="badge badge-warning mr-2">CONTA DEMO</span>
+                                Você está usando uma conta de demonstração
+                            </h5>
+                            @if($beneficiary->demo_expires_at)
+                                @php
+                                    $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
+                                @endphp
+                                @if($daysRemaining > 0)
+                                    <p class="mb-0">
+                                        <strong>Expira em:</strong> {{ $beneficiary->demo_expires_at->format('d/m/Y') }} 
+                                        ({{ $daysRemaining }} {{ $daysRemaining == 1 ? 'dia' : 'dias' }} restantes)
+                                    </p>
+                                @else
+                                    <p class="mb-0 text-danger">
+                                        <strong>Sua conta demo expirou!</strong> Entre em contato para ativar seu plano.
+                                    </p>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <!-- ==========================
                          BOAS-VINDAS

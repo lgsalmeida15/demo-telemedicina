@@ -86,7 +86,22 @@
                                             @foreach ($beneficiaries as $beneficiary)
                                                 <tr>
                                                     <td>{{ $beneficiary->id }}</td>
-                                                    <td>{{ $beneficiary->name }}</td>
+                                                    <td>
+                                                        {{ $beneficiary->name }}
+                                                        @if($beneficiary->is_demo)
+                                                            <span class="badge badge-warning ml-2">DEMO</span>
+                                                            @if($beneficiary->isDemoExpired())
+                                                                <span class="badge badge-danger ml-1">EXPIRADO</span>
+                                                            @else
+                                                                @php
+                                                                    $daysRemaining = now()->diffInDays($beneficiary->demo_expires_at, false);
+                                                                @endphp
+                                                                @if($daysRemaining > 0)
+                                                                    <span class="badge badge-info ml-1">{{ $daysRemaining }}d restantes</span>
+                                                                @endif
+                                                            @endif
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $beneficiary->cpf }}</td>
                                                     <td>{{ $beneficiary->email ?? '--'}}</td>
                                                     <td>{{ $beneficiary->company->plans->count() }}</td>
