@@ -25,6 +25,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        
+        // Executar diariamente à 3h da manhã - Remove beneficiários demo expirados há mais de 7 dias
+        $schedule->command('demo:cleanup --days=7')->dailyAt('03:00');
     }
 
     /**

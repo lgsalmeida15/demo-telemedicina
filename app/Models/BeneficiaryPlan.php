@@ -26,7 +26,12 @@ class BeneficiaryPlan extends Model implements Transformable
         'plan_id',
         'start_date',
         'end_date',
-        'transaction_code'
+        'transaction_code',
+        'is_demo'
+    ];
+
+    protected $casts = [
+        'is_demo' => 'boolean',
     ];
 
 
@@ -56,9 +61,23 @@ class BeneficiaryPlan extends Model implements Transformable
      */
     public function isActive(): bool
     {
-        return is_null($this->end_date)
-            || Carbon::parse($this->end_date)->isFuture()
-            || Carbon::parse($this->end_date)->isToday();
+        // Se for demo, está sempre ativo (enquanto não expirar)
+        if ($this->is_demo && $this->beneficiary && $this->beneficiary->isDemo() && !$this->beneficiary->isDemoExpired()) {
+            return true;
+        }
+        
+        // Validação normal
+        if (!$this->start_date) {
+            return false;
+        }
+        
+        $now = now()->toDateString();
+        
+        if ($this->end_date) {
+            return $this->start_date <= $now && $this->end_date >= $now;
+        }
+        
+        return $this->start_date <= $now;
     }
 
     /**

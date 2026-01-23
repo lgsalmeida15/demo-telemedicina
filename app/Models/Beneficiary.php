@@ -25,10 +25,17 @@ class Beneficiary extends Authenticatable implements Transformable
         'relationship',
         'mother_name',
         'inclusion_date',
-        'exclusion_date'
+        'exclusion_date',
+        'is_demo',
+        'demo_expires_at'
     ];
 
     protected $hidden = ['password'];
+
+    protected $casts = [
+        'is_demo' => 'boolean',
+        'demo_expires_at' => 'datetime',
+    ];
 
     public function company()
     {
@@ -93,6 +100,69 @@ class Beneficiary extends Authenticatable implements Transformable
                 $query->where('is_telemedicine', true);
             })
             ->exists();
+    }
+
+    /**
+     * Verifica se é um beneficiário demo
+     */
+    public function isDemo(): bool
+    {
+        return $this->is_demo === true;
+    }
+
+    /**
+     * Verifica se o período demo expirou
+     */
+    public function isDemoExpired(): bool
+    {
+        if (!$this->is_demo || !$this->demo_expires_at) {
+            return false;
+        }
+        
+        return $this->demo_expires_at->isPast();
+    }
+
+    /**
+     * Verifica se pode acessar (demo válido ou pagamento ok)
+     */
+    public function canAccessPortal(): bool
+    {
+        // Se for demo e não expirou
+        if ($this->isDemo() && !$this->isDemoExpired()) {
+            return true;
+        }
+        
+        // Se não for demo, valida pagamento normal
+        if (!$this->isDemo()) {
+            $plan = $this->currentPlan();
+            return $plan && $plan->isActive() && !$this->isInadimplente();
+        }
+        
+        return false;
+    }
+
+    /**
+     * Verifica se tem plano ativo
+     */
+    public function hasActivePlan(): bool
+    {
+        $plan = $this->currentPlan();
+        return $plan && $plan->isActive() && !$plan->isExpired();
+    }
+
+    /**
+     * Converte beneficiário demo para real
+     */
+    public function convertToReal(): void
+    {
+        $this->update([
+            'is_demo' => false,
+            'demo_expires_at' => null,
+        ]);
+        
+        // Atualizar planos e invoices relacionados
+        $this->plans()->update(['is_demo' => false]);
+        $this->invoices()->update(['is_demo' => false]);
     }
 
     protected static function boot()
