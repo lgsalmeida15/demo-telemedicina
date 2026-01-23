@@ -33,12 +33,7 @@ class Invoice extends Model implements Transformable
         'status',
         'due_date',
         'payment_type',
-        'payment_date',
-        'is_demo'
-    ];
-
-    protected $casts = [
-        'is_demo' => 'boolean',
+        'payment_date'
     ];
 
     /**

@@ -262,20 +262,6 @@ Route::group([
         Route::get('/', 'BeneficiaryController@generalIndex')->name('beneficiary.general.index');
     });
 
-    /**
-     * Gestão de Beneficiários Demo
-     */
-    Route::group(['prefix' => 'demo-beneficiary', 'as' => 'demo-beneficiary.'], function () {
-        Route::get('/', 'DemoBeneficiaryController@index')->name('index');
-        Route::get('/create', 'DemoBeneficiaryController@create')->name('create');
-        Route::post('/', 'DemoBeneficiaryController@store')->name('store');
-        Route::get('/{beneficiary}', 'DemoBeneficiaryController@show')->name('show');
-        Route::post('/{beneficiary}/extend', 'DemoBeneficiaryController@extend')->name('extend');
-        Route::post('/{beneficiary}/convert', 'DemoBeneficiaryController@convertToReal')->name('convert');
-        Route::get('/{beneficiary}/login-as', 'DemoBeneficiaryController@loginAs')->name('login-as');
-        Route::delete('/{beneficiary}', 'DemoBeneficiaryController@destroy')->name('destroy');
-    });
-
     
 
     /**
