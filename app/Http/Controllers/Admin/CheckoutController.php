@@ -163,11 +163,11 @@ class CheckoutController extends Controller
 
             $now = Carbon::now();
 
-            // 🧾 Atualiza payment_date da fatura (se ainda não existir)
+            // 🧾 Atualiza payment_date da fatura (se ainda não existir) - SEM FORÇAR STATUS
             if (is_null($invoice->payment_date)) {
                 $invoice->update([
                     'payment_date' => $now,
-                    'status' => 'CONFIRMED'
+                    // Removido: 'status' => 'CONFIRMED' - não força mais confirmação do Asaas
                 ]);
             }
 

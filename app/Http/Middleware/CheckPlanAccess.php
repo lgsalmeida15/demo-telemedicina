@@ -15,22 +15,9 @@ class CheckPlanAccess
             return redirect()->route('login');
         }
 
-        $beneficiary = method_exists($user, 'beneficiary')
-            ? $user->beneficiary
-            : $user;
-
-        $plan = $beneficiary->currentPlan();
-
-        // ❌ Sem plano
-        if (!$plan) {
-            return redirect()->route('home');
-        }
-
-        // ❌ Plano expirado
-        if ($plan->isExpired()) {
-            return redirect()->route('home');
-        }
-
+        // ✅ REMOVIDO: Validações que bloqueavam acesso sem plano ou com plano expirado
+        // Agora permite acesso mesmo sem validação do Asaas
+        
         return $next($request);
     }
 }
