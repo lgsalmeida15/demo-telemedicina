@@ -81,19 +81,20 @@ class BeneficiaryAuthController extends Controller
 
             \Log::info('Senha verificada com sucesso');
 
-            // ✅ SOLUÇÃO: Usa exatamente a mesma abordagem do DependentAuthController que funciona
-            // Faz login primeiro
+            // ✅ SOLUÇÃO: Faz login SEM regenerate para testar
+            // Se funcionar, sabemos que o problema é o regenerate()
             Auth::guard('beneficiary')->login($beneficiary, false);
             
-            // Depois regenera a sessão (mesma ordem do DependentAuthController)
-            $request->session()->regenerate();
+            // Salva a sessão explicitamente
+            $request->session()->save();
             
-            \Log::info('Beneficiário autenticado', [
+            \Log::info('Beneficiário autenticado (SEM regenerate)', [
                 'email' => $credentials['email'],
                 'session_id' => $request->session()->getId(),
                 'is_authenticated' => Auth::guard('beneficiary')->check(),
                 'user_id' => Auth::guard('beneficiary')->id(),
-                'beneficiary_id' => $beneficiary->id
+                'beneficiary_id' => $beneficiary->id,
+                'session_keys' => array_keys($request->session()->all())
             ]);
             
             // Redireciona para a área do beneficiário
