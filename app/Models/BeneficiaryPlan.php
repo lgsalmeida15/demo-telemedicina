@@ -62,8 +62,25 @@ class BeneficiaryPlan extends Model implements Transformable
     public function isActive(): bool
     {
         // Se for demo, está sempre ativo (enquanto não expirar)
-        if ($this->is_demo && $this->beneficiary && $this->beneficiary->isDemo() && !$this->beneficiary->isDemoExpired()) {
-            return true;
+        // Verificação de segurança: verificar se is_demo existe e está true
+        $isDemo = isset($this->attributes['is_demo']) ? (bool)$this->attributes['is_demo'] : (isset($this->is_demo) ? $this->is_demo : false);
+        
+        if ($isDemo) {
+            try {
+                // Carregar relacionamento se não estiver carregado
+                if (!$this->relationLoaded('beneficiary')) {
+                    $this->load('beneficiary');
+                }
+                
+                if ($this->beneficiary && method_exists($this->beneficiary, 'isDemo') && $this->beneficiary->isDemo()) {
+                    if (method_exists($this->beneficiary, 'isDemoExpired') && !$this->beneficiary->isDemoExpired()) {
+                        return true;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Se houver erro ao verificar demo, continua com validação normal
+                \Log::error('Erro ao verificar demo no BeneficiaryPlan: ' . $e->getMessage());
+            }
         }
         
         // Validação normal

@@ -35,12 +35,20 @@ class ViewServiceProvider extends ServiceProvider
                 }
 
                 if ($plan) {
-                    if (method_exists($plan, 'isCanceledWaitingEnd') && $plan->isCanceledWaitingEnd()) {
-                        $planStatus = 'cancel_waiting_end';
-                    } elseif (method_exists($plan, 'isExpired') && $plan->isExpired()) {
-                        $planStatus = 'expired';
-                    } else {
-                        $planStatus = 'active';
+                    try {
+                        if (method_exists($plan, 'isCanceledWaitingEnd') && $plan->isCanceledWaitingEnd()) {
+                            $planStatus = 'cancel_waiting_end';
+                        } elseif (method_exists($plan, 'isExpired') && $plan->isExpired()) {
+                            $planStatus = 'expired';
+                        } elseif (method_exists($plan, 'isActive') && $plan->isActive()) {
+                            $planStatus = 'active';
+                        } else {
+                            $planStatus = 'inactive';
+                        }
+                    } catch (\Exception $e) {
+                        // Se houver erro ao verificar status do plano, define como null
+                        \Log::error('Erro ao verificar status do plano no ViewServiceProvider: ' . $e->getMessage());
+                        $planStatus = null;
                     }
                 }
             } catch (\Exception $e) {
