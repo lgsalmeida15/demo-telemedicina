@@ -81,15 +81,22 @@ class BeneficiaryAuthController extends Controller
 
             \Log::info('Senha verificada com sucesso');
 
-            // ✅ Autentica o beneficiário
-            if (Auth::guard('beneficiary')->loginUsingId($beneficiary->id)) {
-                $request->session()->regenerate();
-                \Log::info('Beneficiário autenticado com sucesso', [
-                    'email' => $credentials['email'],
-                    'session_id' => $request->session()->getId()
-                ]);
-                return redirect()->route('beneficiary.area.index'); // redireciona para index
-            }
+            // ✅ Autentica o beneficiário PRIMEIRO
+            Auth::guard('beneficiary')->login($beneficiary, false);
+            
+            // Depois regenera a sessão (isso garante que a autenticação está na sessão antes de regenerar)
+            $request->session()->regenerate();
+            
+            \Log::info('Beneficiário autenticado com sucesso', [
+                'email' => $credentials['email'],
+                'session_id' => $request->session()->getId(),
+                'is_authenticated' => Auth::guard('beneficiary')->check(),
+                'user_id' => Auth::guard('beneficiary')->id(),
+                'beneficiary_id' => $beneficiary->id
+            ]);
+            
+            // Redireciona usando intended() para garantir que vai para a rota correta
+            return redirect()->intended(route('beneficiary.area.index'))->with('success', 'Login realizado com sucesso!');
 
             \Log::error('Falha ao autenticar beneficiário - loginUsingId retornou false', [
                 'email' => $credentials['email'],
