@@ -81,22 +81,29 @@ class BeneficiaryAuthController extends Controller
 
             \Log::info('Senha verificada com sucesso');
 
-            // ✅ Autentica o beneficiário PRIMEIRO
-            Auth::guard('beneficiary')->login($beneficiary, false);
+            // ✅ CORRIGIDO: Usa attempt() que já faz login + regenera sessão corretamente
+            // O attempt() verifica credenciais, faz login E regenera a sessão automaticamente
+            // Não precisa chamar regenerate() novamente pois attempt() já faz isso
+            if (Auth::guard('beneficiary')->attempt($credentials, false)) {
+                \Log::info('Beneficiário autenticado com sucesso via attempt()', [
+                    'email' => $credentials['email'],
+                    'session_id' => $request->session()->getId(),
+                    'is_authenticated' => Auth::guard('beneficiary')->check(),
+                    'user_id' => Auth::guard('beneficiary')->id(),
+                    'beneficiary_id' => $beneficiary->id
+                ]);
+                
+                // Redireciona para a área do beneficiário
+                return redirect()->route('beneficiary.area.index')->with('success', 'Login realizado com sucesso!');
+            }
             
-            // Depois regenera a sessão (isso garante que a autenticação está na sessão antes de regenerar)
-            $request->session()->regenerate();
-            
-            \Log::info('Beneficiário autenticado com sucesso', [
-                'email' => $credentials['email'],
-                'session_id' => $request->session()->getId(),
-                'is_authenticated' => Auth::guard('beneficiary')->check(),
-                'user_id' => Auth::guard('beneficiary')->id(),
-                'beneficiary_id' => $beneficiary->id
+            \Log::error('Falha no attempt() mesmo após validação manual', [
+                'email' => $credentials['email']
             ]);
             
-            // Redireciona usando intended() para garantir que vai para a rota correta
-            return redirect()->intended(route('beneficiary.area.index'))->with('success', 'Login realizado com sucesso!');
+            return back()->withErrors([
+                'email' => 'Erro ao realizar login. Tente novamente.',
+            ])->withInput();
 
             \Log::error('Falha ao autenticar beneficiário - loginUsingId retornou false', [
                 'email' => $credentials['email'],
