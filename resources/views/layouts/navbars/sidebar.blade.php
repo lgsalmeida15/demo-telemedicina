@@ -167,12 +167,6 @@
                   <p>{{ __('Beneficiários') }}</p>
                 </a>
               </li>
-              <li class="nav-item{{ $activePage == 'demo-beneficiaries' ? ' active' : '' }}">
-                <a class="nav-link" href="{{ route('admin.demo-beneficiary.index') }}">
-                  <i class="material-icons">person_outline</i>
-                  <p>{{ __('Beneficiários Demo') }}</p>
-                </a>
-              </li>
             </ul>
           </div>
         </li>
