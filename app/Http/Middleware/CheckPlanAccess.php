@@ -36,31 +36,12 @@ class CheckPlanAccess
         }
         
         // Validação normal para beneficiários não-demo
-        try {
-            $currentPlan = $beneficiary->currentPlan();
-            
-            if (!$currentPlan) {
-                return redirect()
-                    ->route('beneficiary.area.index')
-                    ->withErrors('Você não possui um plano ativo.');
-            }
-            
-            // Verificar se plano está expirado (com verificação de segurança)
-            if (method_exists($currentPlan, 'isExpired') && $currentPlan->isExpired()) {
-                return redirect()
-                    ->route('beneficiary.area.index')
-                    ->withErrors('Seu plano está expirado.');
-            }
-            
-            // Verificar se plano está ativo (com verificação de segurança)
-            if (method_exists($currentPlan, 'isActive') && !$currentPlan->isActive()) {
-                return redirect()
-                    ->route('beneficiary.area.index')
-                    ->withErrors('Você não possui um plano ativo.');
-            }
-        } catch (\Exception $e) {
-            // Em caso de erro, logar e permitir acesso (para não bloquear usuários)
-            \Log::error('Erro no CheckPlanAccess: ' . $e->getMessage());
+        $currentPlan = $beneficiary->currentPlan();
+        
+        if (!$currentPlan || $currentPlan->isExpired()) {
+            return redirect()
+                ->route('home')
+                ->withErrors('Você não possui um plano ativo.');
         }
         
         return $next($request);
