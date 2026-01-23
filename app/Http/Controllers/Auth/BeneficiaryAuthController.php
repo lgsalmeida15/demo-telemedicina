@@ -81,14 +81,14 @@ class BeneficiaryAuthController extends Controller
 
             \Log::info('Senha verificada com sucesso');
 
-            // ✅ CORRIGIDO: Faz login SEM regenerar sessão primeiro
-            // O regenerate() está causando perda de autenticação
+            // ✅ SOLUÇÃO: Usa exatamente a mesma abordagem do DependentAuthController que funciona
+            // Faz login primeiro
             Auth::guard('beneficiary')->login($beneficiary, false);
             
-            // Salva a sessão explicitamente antes de qualquer coisa
-            $request->session()->save();
+            // Depois regenera a sessão (mesma ordem do DependentAuthController)
+            $request->session()->regenerate();
             
-            \Log::info('Beneficiário autenticado (sem regenerate)', [
+            \Log::info('Beneficiário autenticado', [
                 'email' => $credentials['email'],
                 'session_id' => $request->session()->getId(),
                 'is_authenticated' => Auth::guard('beneficiary')->check(),
@@ -97,7 +97,6 @@ class BeneficiaryAuthController extends Controller
             ]);
             
             // Redireciona para a área do beneficiário
-            // O regenerate será feito automaticamente na próxima requisição se necessário
             return redirect()->route('beneficiary.area.index')->with('success', 'Login realizado com sucesso!');
 
             \Log::error('Falha ao autenticar beneficiário - loginUsingId retornou false', [
