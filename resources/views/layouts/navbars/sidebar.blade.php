@@ -63,12 +63,11 @@
             @csrf
           </form>
         </li>
-      @endif
 
       {{-- ======================================
           SE FOR DEPENDENTE LOGADO
       ======================================= --}}
-      @if ($isDependent)
+      @elseif ($isDependent)
         <li class="nav-item{{ $activePage == 'dependent_dashboard' ? ' active' : '' }}">
           <a class="nav-link" href="{{ route('dependent.area.index') }}">
             <i class="material-icons">home</i>
@@ -99,12 +98,11 @@
             @csrf
           </form>
         </li>
-      @endif
 
       {{-- ======================================
           SE FOR ADMINISTRADOR LOGADO
       ======================================= --}}
-      @if($isAdmin)
+      @elseif($isAdmin)
         <li class="nav-item{{ $activePage == 'dashboard' ? ' active' : '' }}">
           <a class="nav-link" href="{{ route('admin.home') }}">
             <i class="material-icons">dashboard</i>
