@@ -31,9 +31,9 @@ services:
       - DB_ROOT_PASSWORD=Boxf0t1m1z
       
       # Cache & Session
-      - CACHE_DRIVER=${CACHE_DRIVER:-redis}
-      - SESSION_DRIVER=${SESSION_DRIVER:-redis}
-      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+      - CACHE_DRIVER=${CACHE_DRIVER:-file}
+      - SESSION_DRIVER=${SESSION_DRIVER:-file}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
       - REDIS_HOST=telemedicina-redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
