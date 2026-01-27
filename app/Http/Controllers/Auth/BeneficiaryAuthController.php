@@ -31,17 +31,24 @@ class BeneficiaryAuthController extends Controller
         // Busca o beneficiário
         $beneficiary = Beneficiary::where('email', $credentials['email'])->first();
         
-        if (!$beneficiary || !Hash::check($credentials['password'], $beneficiary->password)) {
+        if (!$beneficiary) {
             return back()->withErrors([
                 'email' => 'As credenciais informadas estão incorretas.',
             ])->withInput();
         }
 
-        // Faz login do beneficiário
-        Auth::guard('beneficiary')->login($beneficiary, false);
+        // Verifica se a senha está correta
+        if (!Hash::check($credentials['password'], $beneficiary->password)) {
+            return back()->withErrors([
+                'email' => 'As credenciais informadas estão incorretas.',
+            ])->withInput();
+        }
+
+        // ✅ Usa exatamente a mesma abordagem do DependentAuthController que funciona
+        Auth::guard('beneficiary')->login($beneficiary);
         
-        // Salva a sessão
-        $request->session()->save();
+        // ✅ Regenera a sessão (essencial para persistência)
+        $request->session()->regenerate();
         
         // Redireciona para a área do beneficiário
         return redirect()->route('beneficiary.area.index')->with('success', 'Login realizado com sucesso!');
