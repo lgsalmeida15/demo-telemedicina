@@ -19,6 +19,18 @@ class Authenticate extends Middleware
      */
     public function handle($request, \Closure $next, ...$guards)
     {
+        // 🔍 DEBUG: Log detalhado para beneficiário
+        if ($request->is('beneficiary-area*')) {
+            \Log::info('Middleware Authenticate - Verificando beneficiário', [
+                'url' => $request->fullUrl(),
+                'guards' => $guards,
+                'session_id' => $request->session()->getId(),
+                'beneficiary_check' => Auth::guard('beneficiary')->check(),
+                'beneficiary_id' => Auth::guard('beneficiary')->id(),
+                'session_data' => $request->session()->all()
+            ]);
+        }
+
         return parent::handle($request, $next, ...$guards);
     }
 
