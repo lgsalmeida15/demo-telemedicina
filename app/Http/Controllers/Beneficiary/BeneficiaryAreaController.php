@@ -212,34 +212,21 @@ class BeneficiaryAreaController extends Controller
     public function telemedicine(Request $request)
     {
         $beneficiary = Auth::guard('beneficiary')->user();
-        $cpf = preg_replace('/\D/', '', $beneficiary->cpf);
-        // parâmetros recebidos (opcionais)
         $date = now()->format('Y-m-d');
-        $availableHours = [];
-        // Só busca horários se a especialidade foi informada
-        try {
-            $ibam = new \App\Services\IBAMService("https://sistema.ibambeneficios.com.br/api/external/");
-            $ibam->login();
-            $exists = $ibam->findBeneficiary($cpf);
-            if (
-                isset($exists['response']['exists']) &&
-                $exists['response']['exists'] === true &&
-                isset($exists['response']['data']['docway_patient_id'])
-            ) {
-                // Já existe na IBAM
-                $docwayUuid = $exists['response']['data']['docway_patient_id'];
-                $response = $ibam->medcareAvailableHours(
-                    $docwayUuid,
-                    1,
-                    $date
-                );
-                if ($response["status"] === 200) {
-                    $availableHours = $response["response"];
-                }
-            }
-        } catch (\Exception $e) {
-            $availableHours = [];
-        }
+        
+        // ✅ Horários mockados para demonstração (hoje e amanhã)
+        $availableHours = [
+            'hours' => [
+                now()->setTime(14, 0)->format('Y-m-d H:i:s'),
+                now()->setTime(15, 30)->format('Y-m-d H:i:s'),
+                now()->setTime(16, 0)->format('Y-m-d H:i:s'),
+                now()->addDay()->setTime(9, 0)->format('Y-m-d H:i:s'),
+                now()->addDay()->setTime(10, 30)->format('Y-m-d H:i:s'),
+                now()->addDay()->setTime(14, 0)->format('Y-m-d H:i:s'),
+                now()->addDay()->setTime(16, 30)->format('Y-m-d H:i:s'),
+            ]
+        ];
+        
         return view('pages.beneficiaries.area.telemedicine', [
             'beneficiary' => $beneficiary,
             'specialtyId' => 1,
@@ -257,95 +244,27 @@ class BeneficiaryAreaController extends Controller
         ]);
 
         $beneficiary = Auth::guard('beneficiary')->user();
-        $cpf = preg_replace('/\D/', '', $beneficiary->cpf);
-        $specialtyId = 1;
-
-        // cria o datetime final
-        $dateTime = $request->hour;
-
-        // ============================================================
-        // 1) INSTÂNCIA DO SERVICE IBAM
-        // ============================================================
-        $ibam = new \App\Services\IBAMService("https://sistema.ibambeneficios.com.br/api/external/");
-        $ibam->login();
-
-        // ============================================================
-        // 2) VERIFICAR SE O BENEFICIÁRIO EXISTE
-        // ============================================================
-        $exists = $ibam->findBeneficiary($cpf);
-
-        $docwayUuid = null;
-        if (
-            isset($exists['response']['exists']) &&
-            $exists['response']['exists'] === true &&
-            isset($exists['response']['data']['docway_patient_id'])
-        ) {
-            $docwayUuid = $exists['response']['data']['docway_patient_id'];
-
-        } else {
-            // CRIAR BENEFICIÁRIO NO IBAM
-            $create = $ibam->createBeneficiary([
-                "name" => $beneficiary->name,
-                "cpf" => $cpf,
-                "email" => $beneficiary->email,
-                "phone" => $beneficiary->phone,
-                "birth_date" => $beneficiary->birth_date,
-                "gender" => $beneficiary->gender,
-                "mother_name" => $beneficiary->mother_name,
-                "relationship" => "Titular"
-            ]);
-
-            $create = $ibam->findBeneficiary($cpf);
-
-            if (
-                !isset($create['response']['success']) ||
-                $create['response']['success'] !== true
-            ) {
-                return back()->withErrors("Erro ao criar beneficiário IBAM.");
-            }
-
-            $docwayUuid = $create['response']['uuid'] ?? null;
-
-            if (!$docwayUuid) {
-                return back()->withErrors("Erro: IBAM não retornou UUID do beneficiário.");
-            }
-        }
-
-        // ============================================================
-        // 4) INICIAR ATENDIMENTO MÉDICO (AGENDADO)
-        // ============================================================
-        $medcare = $ibam->medcareCreate($docwayUuid, [
-            "specialty_id" => $specialtyId,
-            "date_time" => $dateTime
-        ]);
-
-        if (
-            !isset($medcare['response']['success']) ||
-            $medcare['response']['success'] !== true
-        ) {
-            $errorMessage = $medcare['response']['error'] ?? '';
-            // 🔥 TRATAMENTO INTELIGENTE DE ERROS DOCWAY
-            if (str_contains($errorMessage, 'já agendado')) {
-                // Mensagem do tipo: Paciente já agendado para esse horário
-                $userMessage = 'Você já possui um agendamento neste horário. Escolha outro horário disponível.';
-            }
-            elseif (str_contains($errorMessage, 'atendimento em aberto')) {
-                // Mensagem do tipo: Paciente já possui um atendimento em aberto.
-                $userMessage = 'Você já possui um atendimento médico em andamento. Finalize-o antes de iniciar um novo.';
-            }
-            else {
-                $userMessage = 'Não foi possível iniciar o atendimento médico. Tente novamente mais tarde.';
-            }
-            return redirect()
-                ->route('beneficiary.area.telemedicine')
-                ->withErrors(['msg' => $userMessage]);
-        }
-
-
-        // ============================================================
-        // 5) REDIRECIONAR PARA A SALA DOCWAY
-        // ============================================================
-        return redirect()->away($medcare['response']['data']['videoRoomLink']);
+        
+        // ✅ Criar agendamento de demonstração na sessão
+        $appointment = [
+            'appointment_id' => uniqid('demo_'),
+            'date' => $request->hour,
+            'specialty' => 'Clínico Geral',
+            'doctor_name' => 'Dr. ' . ['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Paula'][array_rand(['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Paula'])],
+            'status' => 1, // 1 = Agendado
+            'details_raw' => ['videoRoomLink' => 'https://meet.google.com/demo-consulta-' . uniqid()],
+            'created_at' => now()->toDateTimeString()
+        ];
+        
+        // Salva na sessão
+        $appointments = session('demo_appointments', []);
+        $appointments[] = $appointment;
+        session(['demo_appointments' => $appointments]);
+        
+        // Redireciona de volta com mensagem de sucesso
+        return redirect()
+            ->route('beneficiary.area.schedule')
+            ->with('sucesso', 'Agendamento realizado com sucesso! Você pode visualizá-lo na lista de agendamentos.');
     }
 
 
@@ -376,29 +295,39 @@ class BeneficiaryAreaController extends Controller
     {
         $beneficiary = Auth::guard('beneficiary')->user();
         
-        // ✅ Para demonstração: retorna lista vazia
-        // A view já trata o caso de não ter agendamentos
-        $appointments = [];
+        // ✅ Agendamentos fixos de demonstração
+        $appointmentsMock = [
+            [
+                'appointment_id' => 'demo-1',
+                'date' => now()->addDays(2)->setTime(14, 30)->format('Y-m-d H:i:s'),
+                'specialty' => 'Clínico Geral',
+                'doctor_name' => 'Dr. João Silva',
+                'status' => 1, // 1 = Agendado
+                'details_raw' => ['videoRoomLink' => 'https://meet.google.com/demo-consulta-1']
+            ],
+            [
+                'appointment_id' => 'demo-2',
+                'date' => now()->subDays(5)->setTime(10, 0)->format('Y-m-d H:i:s'),
+                'specialty' => 'Cardiologia',
+                'doctor_name' => 'Dra. Maria Santos',
+                'status' => 5, // 5 = Concluído
+                'details_raw' => ['videoRoomLink' => '#']
+            ],
+            [
+                'appointment_id' => 'demo-3',
+                'date' => now()->addDays(7)->setTime(9, 0)->format('Y-m-d H:i:s'),
+                'specialty' => 'Pediatria',
+                'doctor_name' => 'Dr. Carlos Oliveira',
+                'status' => 1, // 1 = Agendado
+                'details_raw' => ['videoRoomLink' => 'https://meet.google.com/demo-consulta-2']
+            ]
+        ];
         
-        // 📌 OPCIONAL: Descomentar para ter agendamentos de demonstração
-        // $appointments = [
-        //     [
-        //         'appointment_id' => 1,
-        //         'date' => now()->addDays(2)->format('Y-m-d H:i:s'),
-        //         'specialty' => 'Clínico Geral',
-        //         'doctor_name' => 'Dr. João Silva',
-        //         'status' => 1, // 1 = Agendado
-        //         'details_raw' => ['videoRoomLink' => '#']
-        //     ],
-        //     [
-        //         'appointment_id' => 2,
-        //         'date' => now()->subDays(5)->format('Y-m-d H:i:s'),
-        //         'specialty' => 'Cardiologia',
-        //         'doctor_name' => 'Dra. Maria Santos',
-        //         'status' => 5, // 5 = Concluído
-        //         'details_raw' => ['videoRoomLink' => '#']
-        //     ]
-        // ];
+        // ✅ Busca agendamentos criados pelo usuário na sessão
+        $sessionAppointments = session('demo_appointments', []);
+        
+        // ✅ Combina mockados + criados pelo usuário
+        $appointments = array_merge($appointmentsMock, $sessionAppointments);
 
         return view('pages.beneficiaries.area.schedules', compact('appointments'));
     }
