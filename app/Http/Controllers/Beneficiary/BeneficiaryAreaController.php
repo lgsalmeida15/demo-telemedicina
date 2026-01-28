@@ -85,7 +85,11 @@ class BeneficiaryAreaController extends Controller
             ->get()
             ->map(fn($bp) => $bp->plan);
 
-        return view('pages.beneficiaries.area.index', compact('beneficiary', 'plans'));
+        // ✅ ADICIONAR: Status do plano para a sidebar funcionar
+        $currentPlan = $beneficiary->currentPlan();
+        $planStatus = 'active'; // Para demonstração, sempre ativo
+
+        return view('pages.beneficiaries.area.index', compact('beneficiary', 'plans', 'planStatus', 'currentPlan'));
     }
 
 
@@ -95,8 +99,12 @@ class BeneficiaryAreaController extends Controller
     public function profileEdit()
     {
         $profile = Auth::guard('beneficiary')->user();
+        
+        // ✅ Variáveis para sidebar
+        $currentPlan = $profile->currentPlan();
+        $planStatus = 'active';
 
-        return view('pages.beneficiaries.area.edit', compact('profile'));
+        return view('pages.beneficiaries.area.edit', compact('profile', 'planStatus', 'currentPlan'));
     }
 
 
@@ -149,7 +157,12 @@ class BeneficiaryAreaController extends Controller
             'conveniences.convenio.categoria'
         ])->findOrFail($planId);
 
-        return view('pages.beneficiaries.area.planDetails', compact('plan'));
+        // ✅ Variáveis para sidebar
+        $beneficiary = Auth::guard('beneficiary')->user();
+        $currentPlan = $beneficiary->currentPlan();
+        $planStatus = 'active';
+
+        return view('pages.beneficiaries.area.planDetails', compact('plan', 'planStatus', 'currentPlan'));
     }
 
 
@@ -227,11 +240,17 @@ class BeneficiaryAreaController extends Controller
             ]
         ];
         
+        // ✅ Variáveis para sidebar
+        $currentPlan = $beneficiary->currentPlan();
+        $planStatus = 'active';
+        
         return view('pages.beneficiaries.area.telemedicine', [
             'beneficiary' => $beneficiary,
             'specialtyId' => 1,
             'date' => $date,
-            'availableHours' => $availableHours
+            'availableHours' => $availableHours,
+            'planStatus' => $planStatus,
+            'currentPlan' => $currentPlan
         ]);
     }
 
@@ -240,17 +259,19 @@ class BeneficiaryAreaController extends Controller
     public function redirectToTelemedicine(Request $request)
     {
         $request->validate([
-            'hour' => 'required'
+            'hour' => 'required',
+            'specialty' => 'required',
+            'doctor' => 'required'
         ]);
 
         $beneficiary = Auth::guard('beneficiary')->user();
         
-        // ✅ Criar agendamento de demonstração na sessão
+        // ✅ Criar agendamento de demonstração na sessão com dados escolhidos pelo usuário
         $appointment = [
             'appointment_id' => uniqid('demo_'),
             'date' => $request->hour,
-            'specialty' => 'Clínico Geral',
-            'doctor_name' => 'Dr. ' . ['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Paula'][array_rand(['João Silva', 'Maria Santos', 'Carlos Oliveira', 'Ana Paula'])],
+            'specialty' => $request->specialty,  // ← Do formulário
+            'doctor_name' => $request->doctor,   // ← Do formulário
             'status' => 1, // 1 = Agendado
             'details_raw' => ['videoRoomLink' => 'https://meet.google.com/demo-consulta-' . uniqid()],
             'created_at' => now()->toDateTimeString()
@@ -275,15 +296,17 @@ class BeneficiaryAreaController extends Controller
      */
     public function dependents()
     {
-
         $beneficiary = Auth::guard('beneficiary')->user();
         $dependents = Dependent::whereNull('deleted_at')
             ->where('beneficiary_id', $beneficiary->id)
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('pages.beneficiaries.area.dependents', compact('beneficiary', 'dependents'));
+        // ✅ Variáveis para sidebar
+        $currentPlan = $beneficiary->currentPlan();
+        $planStatus = 'active';
 
+        return view('pages.beneficiaries.area.dependents', compact('beneficiary', 'dependents', 'planStatus', 'currentPlan'));
     }
 
 
@@ -329,7 +352,11 @@ class BeneficiaryAreaController extends Controller
         // ✅ Combina mockados + criados pelo usuário
         $appointments = array_merge($appointmentsMock, $sessionAppointments);
 
-        return view('pages.beneficiaries.area.schedules', compact('appointments'));
+        // ✅ Variáveis para sidebar
+        $currentPlan = $beneficiary->currentPlan();
+        $planStatus = 'active';
+
+        return view('pages.beneficiaries.area.schedules', compact('appointments', 'planStatus', 'currentPlan'));
     }
 
     /**

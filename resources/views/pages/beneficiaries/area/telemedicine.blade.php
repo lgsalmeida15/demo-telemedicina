@@ -127,11 +127,33 @@
                         </h4>
 
                         <!-- FORM para iniciar atendimento -->
-                        <form action="{{ route('beneficiary.area.telemedicine.redirect') }}" method="POST" target="_blank">
+                        <form action="{{ route('beneficiary.area.telemedicine.redirect') }}" method="POST">
                             @csrf
 
-                            <!-- Especialidade fixa: Clínico Geral -->
-                            <input type="hidden" name="especialidade" value="1">
+                            <!-- Seleção de Especialidade -->
+                            <label class="form-label">Especialidade</label>
+                            <select name="specialty" class="form-control" required>
+                                <option value="">Selecione a especialidade</option>
+                                <option value="Clínico Geral">Clínico Geral</option>
+                                <option value="Cardiologia">Cardiologia</option>
+                                <option value="Pediatria">Pediatria</option>
+                                <option value="Dermatologia">Dermatologia</option>
+                                <option value="Psiquiatria">Psiquiatria</option>
+                                <option value="Ortopedia">Ortopedia</option>
+                            </select>
+
+                            <!-- Seleção de Profissional -->
+                            <label class="form-label mt-3">Profissional</label>
+                            <select name="doctor" class="form-control" required>
+                                <option value="">Selecione o profissional</option>
+                                <option value="Dr. João Silva">Dr. João Silva</option>
+                                <option value="Dra. Maria Santos">Dra. Maria Santos</option>
+                                <option value="Dr. Carlos Oliveira">Dr. Carlos Oliveira</option>
+                                <option value="Dra. Ana Paula">Dra. Ana Paula</option>
+                                <option value="Dr. Roberto Lima">Dr. Roberto Lima</option>
+                                <option value="Dra. Fernanda Costa">Dra. Fernanda Costa</option>
+                            </select>
+
                             <!-- Seleção de Horários Disponíveis -->
                             <label class="form-label mt-3">Horário Disponível</label>
                             <select name="hour" class="form-control" required>
@@ -169,10 +191,10 @@
                                 @endforelse
 
                             </select>
-                            <!-- BOTÃO PARA INICIAR CONSULTA -->
-                            <button type="submit" class="btn-access mt-3" {{ empty($availableHours) ? 'disabled' : '' }}>
-                                <i class="material-icons" style="vertical-align: middle;">video_call</i>
-                                Acessar Consulta
+                            <!-- BOTÃO PARA AGENDAR CONSULTA -->
+                            <button type="submit" class="btn-access mt-4" {{ empty($availableHours) ? 'disabled' : '' }}>
+                                <i class="material-icons" style="vertical-align: middle;">calendar_today</i>
+                                Agendar Consulta
                             </button>
                         </form>
 
