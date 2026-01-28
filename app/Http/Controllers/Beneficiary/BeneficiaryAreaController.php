@@ -227,35 +227,44 @@ class BeneficiaryAreaController extends Controller
         $beneficiary = Auth::guard('beneficiary')->user();
         $date = now()->format('Y-m-d');
         
-        // ✅ Horários dinâmicos para demonstração (baseados na data/hora atual)
+        // ✅ Horários dinâmicos para demonstração (apenas horários futuros)
+        $now = now();
         $today = now();
         $tomorrow = now()->addDay();
         
         $hours = [];
         
-        // Horários de HOJE (somente horários futuros)
-        $currentHour = (int) $today->format('H');
-        $todayHours = [9, 10, 11, 14, 15, 16, 17];
+        // Horários de HOJE (somente horários futuros - considerando hora E minutos)
+        $todayHours = [9, 10, 11, 14, 15, 16, 17, 18];
         
         foreach ($todayHours as $hour) {
-            if ($hour > $currentHour) {
-                $hours[] = $today->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
-                $hours[] = $today->copy()->setTime($hour, 30)->format('Y-m-d H:i:s');
+            // Verifica horário :00
+            $timeSlot00 = $today->copy()->setTime($hour, 0, 0);
+            if ($timeSlot00->isFuture()) {
+                $hours[] = $timeSlot00->format('Y-m-d H:i:s');
+            }
+            
+            // Verifica horário :30
+            $timeSlot30 = $today->copy()->setTime($hour, 30, 0);
+            if ($timeSlot30->isFuture()) {
+                $hours[] = $timeSlot30->format('Y-m-d H:i:s');
             }
         }
         
-        // Horários de AMANHÃ (todos os horários)
-        $tomorrowHours = [9, 10, 11, 14, 15, 16, 17];
+        // Horários de AMANHÃ (todos os horários disponíveis)
+        $tomorrowHours = [9, 10, 11, 14, 15, 16, 17, 18];
         foreach ($tomorrowHours as $hour) {
             $hours[] = $tomorrow->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
             $hours[] = $tomorrow->copy()->setTime($hour, 30)->format('Y-m-d H:i:s');
         }
         
-        // Se não tiver horários hoje (muito tarde), adicionar mais horários amanhã
-        if (count($hours) < 5) {
-            $extraHours = [18, 19, 20];
+        // Se não tiver horários suficientes, adicionar depois de amanhã
+        if (count($hours) < 8) {
+            $dayAfterTomorrow = now()->addDays(2);
+            $extraHours = [9, 10, 11, 14, 15, 16];
             foreach ($extraHours as $hour) {
-                $hours[] = $tomorrow->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
+                $hours[] = $dayAfterTomorrow->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
+                $hours[] = $dayAfterTomorrow->copy()->setTime($hour, 30)->format('Y-m-d H:i:s');
             }
         }
         
