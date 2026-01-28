@@ -375,16 +375,31 @@ class BeneficiaryAreaController extends Controller
     public function schedules()
     {
         $beneficiary = Auth::guard('beneficiary')->user();
-        $cpf = preg_replace('/\D/', '', $beneficiary->cpf);
-        $service = new \App\Services\IBAMService("https://sistema.ibambeneficios.com.br/api/external/");
-        $service->login();
-        $beneficiaryIbam = $service->findBeneficiary($cpf);
-        if (!$beneficiaryIbam['response']['success']) {
-            return view('pages.beneficiaries.area.schedules')
-                ->with('appointments', []);
-        }
-        $result = $service->medcareList($beneficiaryIbam['response']['data']['docway_patient_id']);
-        $appointments = $result['response']['records'] ?? [];
+        
+        // ✅ Para demonstração: retorna lista vazia
+        // A view já trata o caso de não ter agendamentos
+        $appointments = [];
+        
+        // 📌 OPCIONAL: Descomentar para ter agendamentos de demonstração
+        // $appointments = [
+        //     [
+        //         'appointment_id' => 1,
+        //         'date' => now()->addDays(2)->format('Y-m-d H:i:s'),
+        //         'specialty' => 'Clínico Geral',
+        //         'doctor_name' => 'Dr. João Silva',
+        //         'status' => 1, // 1 = Agendado
+        //         'details_raw' => ['videoRoomLink' => '#']
+        //     ],
+        //     [
+        //         'appointment_id' => 2,
+        //         'date' => now()->subDays(5)->format('Y-m-d H:i:s'),
+        //         'specialty' => 'Cardiologia',
+        //         'doctor_name' => 'Dra. Maria Santos',
+        //         'status' => 5, // 5 = Concluído
+        //         'details_raw' => ['videoRoomLink' => '#']
+        //     ]
+        // ];
+
         return view('pages.beneficiaries.area.schedules', compact('appointments'));
     }
 
