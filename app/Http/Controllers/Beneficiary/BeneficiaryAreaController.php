@@ -332,6 +332,32 @@ class BeneficiaryAreaController extends Controller
         return view('pages.beneficiaries.area.schedules', compact('appointments'));
     }
 
+    /**
+     * Cancelar um agendamento específico (demonstração)
+     */
+    public function cancelSchedule(Request $request)
+    {
+        $appointmentId = $request->input('appointment_id');
+        
+        // ✅ Busca agendamentos da sessão
+        $appointments = session('demo_appointments', []);
+        
+        // ✅ Remove o agendamento específico
+        $appointments = array_filter($appointments, function($app) use ($appointmentId) {
+            return $app['appointment_id'] !== $appointmentId;
+        });
+        
+        // ✅ Reindexar o array
+        $appointments = array_values($appointments);
+        
+        // ✅ Atualiza a sessão
+        session(['demo_appointments' => $appointments]);
+        
+        return redirect()
+            ->route('beneficiary.area.schedule')
+            ->with('sucesso', 'Agendamento cancelado com sucesso!');
+    }
+
      /**
       * Summary of cancel
       * @param Request $request

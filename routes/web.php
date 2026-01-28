@@ -68,6 +68,7 @@ Route::group(
         Route::get('/telemedicine', 'BeneficiaryAreaController@telemedicine')->name('beneficiary.area.telemedicine');
         Route::post('/telemedicine/redirect', 'BeneficiaryAreaController@redirectToTelemedicine')->name('beneficiary.area.telemedicine.redirect');
         Route::get('/schedule', 'BeneficiaryAreaController@schedules')->name('beneficiary.area.schedule');
+        Route::post('/schedule/cancel', 'BeneficiaryAreaController@cancelSchedule')->name('beneficiary.area.schedule.cancel');
         Route::post('/cancel', 'BeneficiaryAreaController@cancel')->name('beneficiary.area.cancel');
         Route::post('/updatecreditcard', 'BeneficiaryAreaController@updatecreditcard')->name('beneficiary.area.updatecreditcard');
     }

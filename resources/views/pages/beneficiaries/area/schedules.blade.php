@@ -219,32 +219,34 @@
                             </div>
 
 
-                            <div class="actions d-flex justify-content-end">
+                            <div class="actions">
 
-                                {{-- ACESSAR SALA (se não cancelado e link existir) --}}
+                                {{-- ACESSAR SALA E CANCELAR (se agendado) --}}
                                 @if ($app['status'] == 1)
                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="alert alert-warning" role="alert">
-                                                Para cancelar sua consulta basta acessar a área de consulta.
-                                            </div>
-                                        </div>
-                                        <div class="col-6" style="text-align: center;text-align: -webkit-center;">
-                                            <a href="{{ $videoRoom }}" class="btn btn-info btn-action btn-view" target="_blank"
-                                                title="Acessar Consulta">
-                                                <i class="material-icons">videocam</i>
+                                        <div class="col-12 mb-2" style="text-align: center;">
+                                            <a href="{{ $videoRoom }}" class="btn btn-success btn-action btn-view" target="_blank"
+                                                title="Acessar Consulta" style="width: 100%; border-radius: 8px; padding: 10px;">
+                                                <i class="material-icons" style="vertical-align: middle;">videocam</i>
+                                                Acessar Consulta
                                             </a>
+                                        </div>
+                                        <div class="col-12" style="text-align: center;">
+                                            {{-- BOTÃO CANCELAR --}}
+                                            <form method="POST" action="{{ route('beneficiary.area.schedule.cancel') }}" style="display: inline; width: 100%;">
+                                                @csrf
+                                                <input type="hidden" name="appointment_id" value="{{ $id }}">
+                                                <button type="submit" class="btn btn-danger btn-action" 
+                                                        onclick="return confirm('Tem certeza que deseja cancelar esta consulta?')"
+                                                        title="Cancelar Consulta"
+                                                        style="width: 100%; border-radius: 8px; padding: 10px;">
+                                                    <i class="material-icons" style="vertical-align: middle;">cancel</i>
+                                                    Cancelar Consulta
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 @endif
-
-                                {{-- CANCELAR (somente se não cancelado) --}}
-                                {{-- @if ($statusLabel == 'Agendado')
-                                    <button class="btn btn-danger btn-action btn-cancel" data-toggle="modal"
-                                        data-target="#cancelAppointmentModal" data-id="{{ $id }}">
-                                        <i class="material-icons">cancel</i>
-                                    </button>
-                                @endif --}}
                             </div>
                         </div>
                     </div>
