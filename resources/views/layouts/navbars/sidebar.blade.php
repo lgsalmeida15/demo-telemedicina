@@ -25,32 +25,27 @@
           </a>
         </li>
 
-        @if ($planStatus === 'active')
-          {{-- Se o beneficiário tiver plano com telemedicina, ele verá essa opção --}}
-          @if(Auth::guard('beneficiary')->user()->hasTelemedicina())
-            <li class="nav-item{{ $activePage == 'telemedicine' ? ' active' : '' }}">
-              <a class="nav-link loading-link" href="{{ route('beneficiary.area.telemedicine') }}">
-                <i class="material-icons">local_hospital</i>
-                <p>{{ __('Telemedicina') }}</p>
-              </a>
-            </li>
-          @endif
-          
+        {{-- ✅ Telemedicina sempre visível para demonstração --}}
+        <li class="nav-item{{ $activePage == 'telemedicine' ? ' active' : '' }}">
+          <a class="nav-link loading-link" href="{{ route('beneficiary.area.telemedicine') }}">
+            <i class="material-icons">local_hospital</i>
+            <p>{{ __('Telemedicina') }}</p>
+          </a>
+        </li>
 
-          <li class="nav-item{{ $activePage == 'dependents' ? ' active' : '' }}">
-            <a class="nav-link" href="{{ route('beneficiary.area.dependent') }}">
-              <i class="material-icons">accessibility</i>
-              <p>{{ __('Dependentes') }}</p>
-            </a>
-          </li>
+        <li class="nav-item{{ $activePage == 'dependents' ? ' active' : '' }}">
+          <a class="nav-link" href="{{ route('beneficiary.area.dependent') }}">
+            <i class="material-icons">accessibility</i>
+            <p>{{ __('Dependentes') }}</p>
+          </a>
+        </li>
 
-          <li class="nav-item{{ $activePage == 'schedules' ? ' active' : '' }}">
-            <a class="nav-link loading-link" href="{{ route('beneficiary.area.schedule') }}">
-              <i class="material-icons">calendar_month</i>
-              <p>{{ __('Agendamentos') }}</p>
-            </a>
-          </li>
-        @endif
+        <li class="nav-item{{ $activePage == 'schedules' ? ' active' : '' }}">
+          <a class="nav-link loading-link" href="{{ route('beneficiary.area.schedule') }}">
+            <i class="material-icons">calendar_month</i>
+            <p>{{ __('Agendamentos') }}</p>
+          </a>
+        </li>
         
 
         <li class="nav-item" style="margin-bottom: 8rem">

@@ -227,18 +227,39 @@ class BeneficiaryAreaController extends Controller
         $beneficiary = Auth::guard('beneficiary')->user();
         $date = now()->format('Y-m-d');
         
-        // ✅ Horários mockados para demonstração (hoje e amanhã)
-        $availableHours = [
-            'hours' => [
-                now()->setTime(14, 0)->format('Y-m-d H:i:s'),
-                now()->setTime(15, 30)->format('Y-m-d H:i:s'),
-                now()->setTime(16, 0)->format('Y-m-d H:i:s'),
-                now()->addDay()->setTime(9, 0)->format('Y-m-d H:i:s'),
-                now()->addDay()->setTime(10, 30)->format('Y-m-d H:i:s'),
-                now()->addDay()->setTime(14, 0)->format('Y-m-d H:i:s'),
-                now()->addDay()->setTime(16, 30)->format('Y-m-d H:i:s'),
-            ]
-        ];
+        // ✅ Horários dinâmicos para demonstração (baseados na data/hora atual)
+        $today = now();
+        $tomorrow = now()->addDay();
+        
+        $hours = [];
+        
+        // Horários de HOJE (somente horários futuros)
+        $currentHour = (int) $today->format('H');
+        $todayHours = [9, 10, 11, 14, 15, 16, 17];
+        
+        foreach ($todayHours as $hour) {
+            if ($hour > $currentHour) {
+                $hours[] = $today->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
+                $hours[] = $today->copy()->setTime($hour, 30)->format('Y-m-d H:i:s');
+            }
+        }
+        
+        // Horários de AMANHÃ (todos os horários)
+        $tomorrowHours = [9, 10, 11, 14, 15, 16, 17];
+        foreach ($tomorrowHours as $hour) {
+            $hours[] = $tomorrow->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
+            $hours[] = $tomorrow->copy()->setTime($hour, 30)->format('Y-m-d H:i:s');
+        }
+        
+        // Se não tiver horários hoje (muito tarde), adicionar mais horários amanhã
+        if (count($hours) < 5) {
+            $extraHours = [18, 19, 20];
+            foreach ($extraHours as $hour) {
+                $hours[] = $tomorrow->copy()->setTime($hour, 0)->format('Y-m-d H:i:s');
+            }
+        }
+        
+        $availableHours = ['hours' => $hours];
         
         // ✅ Variáveis para sidebar
         $currentPlan = $beneficiary->currentPlan();
